@@ -1,12 +1,10 @@
 var points;
 
-var NumPoints = 5000;
+var NumPoints = 500000;
 
 function start(gl, canvas, program) {
-    //
-    //  Initialize our data for the Sierpinski Gasket
-    //
 
+    // 3. Calculate vertex data
     // First, initialize the corners of our gasket with three points.
     var vertices = [
         vec2( -1, -1 ),
@@ -35,28 +33,33 @@ function start(gl, canvas, program) {
 
         p = add( points[i], vertices[j] );
         p = scale( 0.5, p );
+
+        // var dx = (Math.random()*2-1) * 0.1
+        // var dy = (Math.random()*2-1) * 0.1
+        // p[0] += dx
+        // p[1] += dy
+
         points.push( p );
     }
 
-    //
-    //  Configure WebGL
-    //
+    // 4. Configure WebGL
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
 
-    //  Load shaders and initialize attribute buffers
+    // 5. Select shaders
     gl.useProgram( program );
 
-    // Load the data into the GPU
+    // 6. Load vertex data into the GPU
     var bufferId = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, bufferId );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
 
-    // Associate out shader variables with our data buffer
+    // 7. Associate out shader variables with our data buffer
     var vPos = gl.getAttribLocation( program, "vPosition" );
     gl.vertexAttribPointer( vPos, 2, gl.FLOAT, false, 0, 0 );
     gl.enableVertexAttribArray( vPos );
 
+    // 8. Do Render work
     gl.clear( gl.COLOR_BUFFER_BIT );
     gl.drawArrays( gl.POINTS, 0, points.length );
 }
