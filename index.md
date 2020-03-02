@@ -4,6 +4,8 @@
 
 [2_6.html](homework\ch2\2_6.html)
 
+[2_7.html](homework\ch2\2_7.html)
+
 # test
 [index.html](test\index.html)
 
