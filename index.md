@@ -8,6 +8,10 @@
 
 [2_7.html](homework\ch2\2_7.html)
 
+# scratch
+## color_cube
+[index.html](scratch\color_cube\index.html)
+
 # test
 [index.html](test\index.html)
 

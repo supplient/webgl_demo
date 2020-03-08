@@ -37,7 +37,13 @@ function start(gl, canvas, program) {
     ];
 
     // 3.5. Calculate Transform Matrix
-    var view_mat = mat4(
+    var view_rotate_mat = mat4(
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    );
+    var view_translate_mat = mat4(
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
@@ -76,7 +82,7 @@ function start(gl, canvas, program) {
     // Assign uniform varaibles
     var u_mvp = gl.getUniformLocation(program, "u_mvp");
     var updateMVP = function() {
-        var mvp_mat = view_mat;
+        var mvp_mat = mult(view_translate_mat, view_rotate_mat);
         gl.uniformMatrix4fv(u_mvp, false, flatten(mvp_mat));
     };
     updateMVP();
@@ -90,17 +96,75 @@ function start(gl, canvas, program) {
     requestAnimationFrame(render);
 
     // 8. Regist Events
+
+    // View
+    // Input: canvas, view_mat, updateMVP
     var vp = {
         DEGREE_PER_DIST: 0.1,
         CENTER_VEC: vec4(0, 0, 1, 0),
+
+        INERTIA_DEGREE_FACTOR: 50,
+        INERTIA_FADE_FACTOR: 0.924,
+        INERTIA_THETA: 0.1,
+        INERTIA_LAST_NUM: 4,
+        INERTIA_MAX_DETLA_TIME: 300,
+
+        WHEEL_FACTOR: 1/125/10,
+
         old_view_mat: null,
         start_pos: null,
         is_dragging: false,
-    };// view params, just a namespace
+
+        last_pos: [],
+        last_time: [],
+        inertia_axis: null,
+        inertia_degree: null,
+
+        z_delta: 0,
+
+        pushLastPosAndTime: function(now_pos) {
+            this.last_pos.push(now_pos);
+            this.last_time.push(new Date().getTime());
+            if(this.last_pos.length > this.INERTIA_LAST_NUM) {
+                this.last_pos = this.last_pos.slice(0, 1);
+                this.last_time = this.last_time.slice(0, 1);
+            }
+        },
+        calDegreeAndAxis: function(now_pos, old_pos) {
+            var delta_vec = subtract(now_pos, old_pos);
+            delta_vec = vec4(delta_vec[0], -delta_vec[1], 0, 0);
+            var dist = length(delta_vec);
+            var degree = -dist * vp.DEGREE_PER_DIST;
+            var axis_vec = cross(vp.CENTER_VEC, delta_vec);
+            return [degree, axis_vec];
+        },
+        inertiaRotateFrame: function() {
+            if(!vp.inertia_degree)
+                return;
+            var added_view_mat = rotate(vp.inertia_degree, vp.inertia_axis);
+            view_rotate_mat = mult(added_view_mat, view_rotate_mat);
+            updateMVP();
+
+            vp.inertia_degree *= vp.INERTIA_FADE_FACTOR;
+            if(Math.abs(vp.inertia_degree) < vp.INERTIA_THETA) {
+                vp.inertia_axis = null;
+                vp.inertia_degree = null;
+            }
+            else
+                requestAnimationFrame(vp.inertiaRotateFrame);
+        }
+    };// view namespace, just a namespace
 
     canvas.addEventListener("mousedown", function(ev){
-        vp.old_view_mat = view_mat;
+        // clear inertia
+        vp.inertia_axis = null;
+        vp.inertia_degree = null;
+        vp.last_pos = [];
+        vp.last_time = [];
+
+        vp.old_view_mat = view_rotate_mat;
         vp.start_pos = vec2(ev.offsetX, ev.offsetY);
+        vp.pushLastPosAndTime(vp.start_pos);
         vp.is_dragging = true;
     });
 
@@ -108,25 +172,60 @@ function start(gl, canvas, program) {
         if(!vp.is_dragging)
             return;
         var now_pos = vec2(ev.offsetX, ev.offsetY);
-        // Note, this delta_vec is in canva's axis system, instead of webgl's axis system
-        // But since we only need its direction, that doesn't matter
-        var delta_vec = subtract(now_pos, vp.start_pos);
-        delta_vec = vec4(delta_vec[0], -delta_vec[1], 0, 0);
-        var dist = length(delta_vec);
-        var degree = dist * vp.DEGREE_PER_DIST;
-        var axis_vec = cross(vp.CENTER_VEC, delta_vec);
+        vp.pushLastPosAndTime(now_pos);
 
-        var added_view_mat = rotate(-degree, axis_vec);
-        view_mat = mult(added_view_mat, vp.old_view_mat);
+        var tmp = vp.calDegreeAndAxis(now_pos, vp.start_pos);
+        var degree = tmp[0];
+        var axis_vec = tmp[1];
+
+        var added_view_mat = rotate(degree, axis_vec);
+        view_rotate_mat = mult(added_view_mat, vp.old_view_mat);
         updateMVP();
     });
 
     canvas.addEventListener("mouseup", function(ev){
+        if(!vp.is_dragging)
+            return;
         vp.is_dragging = false;
+
+        var now_pos = [ev.offsetX, ev.offsetY];
+        vp.pushLastPosAndTime(now_pos);
+
+        // cal delta time
+        var first_time = vp.last_time[0];
+        var end_time = vp.last_time.pop();
+        vp.last_time = [];
+        var delta_time = end_time - first_time;
+
+        if(delta_time == 0 || delta_time > vp.INERTIA_MAX_DETLA_TIME) {
+            vp.last_pos = [];
+            return;
+        }
+
+        // cal delta degree and rotate axis
+        var first_pos = vp.last_pos[0];
+        var end_pos = vp.last_pos.pop();
+        vp.last_pos = [];
+        var tmp = vp.calDegreeAndAxis(end_pos, first_pos);
+        var degree = tmp[0];
+        vp.inertia_axis = tmp[1];
+
+        // cal inertia degree
+        vp.inertia_degree = degree / delta_time * vp.INERTIA_DEGREE_FACTOR;
+
+        requestAnimationFrame(vp.inertiaRotateFrame);
     });
 
     canvas.addEventListener("mouseleave", function(ev){
         vp.is_dragging = false;
+    });
+
+    canvas.addEventListener("wheel", function(ev){
+        // This has no effect now, we need perspective projection matrix!
+        vp.z_delta += ev.deltaY * vp.WHEEL_FACTOR;
+
+        view_translate_mat = translate(0, 0, vp.z_delta);
+        updateMVP();
     });
 }
 
