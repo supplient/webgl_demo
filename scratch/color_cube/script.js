@@ -99,7 +99,7 @@ function start(gl, canvas, program) {
 
     // View
     // Input: canvas, view_mat, updateMVP
-    var vp = {
+    var vp = {// view namespace, just a namespace
         DEGREE_PER_DIST: 0.1,
         CENTER_VEC: vec4(0, 0, 1, 0),
 
@@ -121,6 +121,7 @@ function start(gl, canvas, program) {
         inertia_degree: null,
 
         z_delta: 0,
+
 
         pushLastPosAndTime: function(now_pos) {
             this.last_pos.push(now_pos);
@@ -152,80 +153,120 @@ function start(gl, canvas, program) {
             }
             else
                 requestAnimationFrame(vp.inertiaRotateFrame);
+        },
+
+
+        onDown: function(now_pos) {
+            // clear inertia
+            vp.inertia_axis = null;
+            vp.inertia_degree = null;
+            vp.last_pos = [];
+            vp.last_time = [];
+
+            vp.old_view_mat = view_rotate_mat;
+            vp.start_pos = now_pos;
+            vp.pushLastPosAndTime(vp.start_pos);
+            vp.is_dragging = true;
+        },
+        onMove: function(now_pos) {
+            if(!vp.is_dragging)
+                return;
+            vp.pushLastPosAndTime(now_pos);
+
+            var tmp = vp.calDegreeAndAxis(now_pos, vp.start_pos);
+            var degree = tmp[0];
+            var axis_vec = tmp[1];
+
+            var added_view_mat = rotate(degree, axis_vec);
+            view_rotate_mat = mult(added_view_mat, vp.old_view_mat);
+            updateMVP();
+        },
+        onUp: function(now_pos) {
+            if(!vp.is_dragging)
+                return;
+            vp.is_dragging = false;
+
+            vp.pushLastPosAndTime(now_pos);
+
+            // cal delta time
+            var first_time = vp.last_time[0];
+            var end_time = vp.last_time.pop();
+            vp.last_time = [];
+            var delta_time = end_time - first_time;
+
+            if(delta_time == 0 || delta_time > vp.INERTIA_MAX_DETLA_TIME) {
+                vp.last_pos = [];
+                return;
+            }
+
+            // cal delta degree and rotate axis
+            var first_pos = vp.last_pos[0];
+            var end_pos = vp.last_pos.pop();
+            vp.last_pos = [];
+            var tmp = vp.calDegreeAndAxis(end_pos, first_pos);
+            var degree = tmp[0];
+            vp.inertia_axis = tmp[1];
+
+            // cal inertia degree
+            vp.inertia_degree = degree / delta_time * vp.INERTIA_DEGREE_FACTOR;
+
+            requestAnimationFrame(vp.inertiaRotateFrame);
+        },
+        onCancel: function() {
+            vp.is_dragging = false;
+        },
+        onScale: function(delta) {
+            // This has no effect now, we need perspective projection matrix!
+            vp.z_delta += delta;
+
+            view_translate_mat = translate(0, 0, vp.z_delta);
+            updateMVP();
         }
-    };// view namespace, just a namespace
+    };
 
     canvas.addEventListener("mousedown", function(ev){
-        // clear inertia
-        vp.inertia_axis = null;
-        vp.inertia_degree = null;
-        vp.last_pos = [];
-        vp.last_time = [];
-
-        vp.old_view_mat = view_rotate_mat;
-        vp.start_pos = vec2(ev.offsetX, ev.offsetY);
-        vp.pushLastPosAndTime(vp.start_pos);
-        vp.is_dragging = true;
+        vp.onDown(vec2(ev.clientX, ev.clientY));
     });
 
     canvas.addEventListener("mousemove", function(ev){
-        if(!vp.is_dragging)
-            return;
-        var now_pos = vec2(ev.offsetX, ev.offsetY);
-        vp.pushLastPosAndTime(now_pos);
-
-        var tmp = vp.calDegreeAndAxis(now_pos, vp.start_pos);
-        var degree = tmp[0];
-        var axis_vec = tmp[1];
-
-        var added_view_mat = rotate(degree, axis_vec);
-        view_rotate_mat = mult(added_view_mat, vp.old_view_mat);
-        updateMVP();
+        vp.onMove(vec2(ev.clientX, ev.clientY));
     });
 
     canvas.addEventListener("mouseup", function(ev){
-        if(!vp.is_dragging)
-            return;
-        vp.is_dragging = false;
-
-        var now_pos = [ev.offsetX, ev.offsetY];
-        vp.pushLastPosAndTime(now_pos);
-
-        // cal delta time
-        var first_time = vp.last_time[0];
-        var end_time = vp.last_time.pop();
-        vp.last_time = [];
-        var delta_time = end_time - first_time;
-
-        if(delta_time == 0 || delta_time > vp.INERTIA_MAX_DETLA_TIME) {
-            vp.last_pos = [];
-            return;
-        }
-
-        // cal delta degree and rotate axis
-        var first_pos = vp.last_pos[0];
-        var end_pos = vp.last_pos.pop();
-        vp.last_pos = [];
-        var tmp = vp.calDegreeAndAxis(end_pos, first_pos);
-        var degree = tmp[0];
-        vp.inertia_axis = tmp[1];
-
-        // cal inertia degree
-        vp.inertia_degree = degree / delta_time * vp.INERTIA_DEGREE_FACTOR;
-
-        requestAnimationFrame(vp.inertiaRotateFrame);
+        vp.onUp(vec2(ev.clientX, ev.clientY));
     });
 
     canvas.addEventListener("mouseleave", function(ev){
-        vp.is_dragging = false;
+        vp.onCancel();
     });
 
     canvas.addEventListener("wheel", function(ev){
-        // This has no effect now, we need perspective projection matrix!
-        vp.z_delta += ev.deltaY * vp.WHEEL_FACTOR;
+        vp.onScale(ev.deltaY * vp.WHEEL_FACTOR);
+    });
 
-        view_translate_mat = translate(0, 0, vp.z_delta);
-        updateMVP();
+    canvas.addEventListener("touchstart", function(ev){
+        if(ev.changedTouches.length < 1)
+            return;
+        var touch = ev.touches[0];
+        vp.onDown(vec2(touch.clientX, touch.clientY));
+    });
+
+    canvas.addEventListener("touchmove", function(ev){
+        if(ev.changedTouches.length < 1)
+            return;
+        var touch = ev.touches[0];
+        vp.onMove(vec2(touch.clientX, touch.clientY));
+    });
+
+    canvas.addEventListener("touchend", function(ev){
+        if(ev.changedTouches.length < 1)
+            return;
+        var touch = ev.touches[0];
+        vp.onUp(vec2(touch.clientX, touch.clientY));
+    });
+
+    canvas.addEventListener("touchcancel", function(ev){
+        vp.onCancel();
     });
 }
 
