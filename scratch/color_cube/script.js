@@ -43,7 +43,7 @@ function start(gl, canvas, program) {
         0, 0, 1, 0,
         0, 0, 0, 1
     );
-    var view_translate_mat = mat4(
+    var view_scale_mat = mat4(
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
@@ -82,7 +82,7 @@ function start(gl, canvas, program) {
     // Assign uniform varaibles
     var u_mvp = gl.getUniformLocation(program, "u_mvp");
     var updateMVP = function() {
-        var mvp_mat = mult(view_translate_mat, view_rotate_mat);
+        var mvp_mat = mult(view_scale_mat, view_rotate_mat);
         gl.uniformMatrix4fv(u_mvp, false, flatten(mvp_mat));
     };
     updateMVP();
@@ -100,16 +100,18 @@ function start(gl, canvas, program) {
     // View
     // Input: canvas, view_mat, updateMVP
     var vp = {// view namespace, just a namespace
-        DEGREE_PER_DIST: 0.1,
+        DEGREE_PER_DIST: 0.2,
         CENTER_VEC: vec4(0, 0, 1, 0),
 
         INERTIA_DEGREE_FACTOR: 50,
-        INERTIA_FADE_FACTOR: 0.924,
+        INERTIA_FADE_FACTOR: 0.9375,
         INERTIA_THETA: 0.1,
-        INERTIA_LAST_NUM: 4,
+        INERTIA_COUNT_POS_NUM: 4,
         INERTIA_MAX_DETLA_TIME: 300,
 
-        WHEEL_FACTOR: 1/125/10,
+        WHEEL_FACTOR: -1/125/10,
+        PER_SCALE_FACTOR: 0.15,
+        MIN_SCALE_FACTOR: 0.1,
 
         old_view_mat: null,
         start_pos: null,
@@ -120,13 +122,13 @@ function start(gl, canvas, program) {
         inertia_axis: null,
         inertia_degree: null,
 
-        z_delta: 0,
+        scale_factor: 1,
 
 
         pushLastPosAndTime: function(now_pos) {
             this.last_pos.push(now_pos);
             this.last_time.push(new Date().getTime());
-            if(this.last_pos.length > this.INERTIA_LAST_NUM) {
+            if(this.last_pos.length > this.INERTIA_COUNT_POS_NUM) {
                 this.last_pos = this.last_pos.slice(0, 1);
                 this.last_time = this.last_time.slice(0, 1);
             }
@@ -217,9 +219,11 @@ function start(gl, canvas, program) {
         },
         onScale: function(delta) {
             // This has no effect now, we need perspective projection matrix!
-            vp.z_delta += delta;
+            vp.scale_factor += delta * vp.PER_SCALE_FACTOR;
+            if(vp.scale_factor < vp.MIN_SCALE_FACTOR)
+                vp.scale_factor = vp.MIN_SCALE_FACTOR;
 
-            view_translate_mat = translate(0, 0, vp.z_delta);
+            view_scale_mat = scalem(vp.scale_factor, vp.scale_factor, vp.scale_factor);
             updateMVP();
         }
     };
