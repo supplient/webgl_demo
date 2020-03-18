@@ -12,6 +12,9 @@
 ## color_cube
 [index.html](scratch\color_cube\index.html)
 
+## 四面体
+[index.html](scratch\四面体\index.html)
+
 # test
 [index.html](test\index.html)
 
