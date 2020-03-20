@@ -12,8 +12,11 @@
 ## color_cube
 [index.html](scratch\color_cube\index.html)
 
-## 四面体
-[index.html](scratch\四面体\index.html)
+## EightTriangles
+[index.html](scratch\EightTriangles\index.html)
+
+## Tetrahedron
+[index.html](scratch\Tetrahedron\index.html)
 
 # test
 [index.html](test\index.html)
