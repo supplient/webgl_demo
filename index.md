@@ -15,6 +15,9 @@
 ## Ball_anime
 [index.html](scratch\Ball_anime\index.html)
 
+## Ball_anime_smooth
+[index.html](scratch\Ball_anime_smooth\index.html)
+
 ## color_cube
 [index.html](scratch\color_cube\index.html)
 

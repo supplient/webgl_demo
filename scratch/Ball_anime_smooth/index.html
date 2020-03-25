@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+    <title>2D Sierpinski Gasket</title>
+
+    <script type="text/javascript" src="../../lib/webgl-utils.js"></script>
+    <script type="text/javascript" src="../../lib/initShaders.js"></script>
+    <script type="text/javascript" src="../../lib/MV.js"></script>
+    <script type="text/javascript" src="../../lib/view.js"></script>
+    <script type="text/javascript" src="script.js"></script>
+</head>
+
+<body onload="main()">
+    <canvas id="webgl" width="512" height="512">
+    Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <p>
+        这个和Ball_anime的差别在于：
+        Ball_anime是每两迭代之间进行所有计算，也就是在两个迭代之间的那帧中计算出下一迭代的顶点数据。
+        而这个Ball_anime_smooth则是在每一帧中计算一小会儿下一迭代所需的顶点数据。
+        这样做的好处就是计算量很大的时候，在两个迭代之间也不会卡顿。
+        当然计算量太大的时候还是会卡。
+    </p>
+</body>
+</html>
