@@ -32,7 +32,7 @@ window.onload = function main() {
     );
     downloadModels([
         {
-            obj: "../../sources/two_faces.obj",
+            obj: "../../sources/cube.obj",
             mtl: true,
         }
     ]).then(models => {
@@ -52,7 +52,7 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     gl.enableVertexAttribArray(gl.a_pos);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer.norm);
     gl.vertexAttribPointer(gl.a_norm, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(gl.a_pos);
+    gl.enableVertexAttribArray(gl.a_norm);
 
     // 3. Calculate mvp_mat & norm_nat
     var mvp_mat = mult(gl.view_mat, model_mat);

@@ -19,5 +19,5 @@ void main()
     
     vec4 ambient = vec4(0.3, 0.3, 0.3, 1.0);
 
-    gl_FragColor = vec4(1, 0, 0, 1);// TODO test
+    gl_FragColor = diffuse + ambient;
 }
