@@ -42,6 +42,17 @@ window.onload = function main() {
     });
 };
 
+class Light {
+    constructor(color, pos=null) {
+        this.color = color;
+        this.pos = pos;
+    }
+
+    isAmbient() {
+        return pos==null;
+    }
+}
+
 function drawModel(gl, program, mesh, buffer, model_mat) {
     // 1. Select shaders
     gl.useProgram( program );
@@ -71,10 +82,19 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     // Draw material by material
     var index_buffers = buffer.indices;
     for(var mtl_i=0; mtl_i<index_buffers.length; mtl_i++) {
-        // 5. Assign uniform variables
-        var material = mesh.materialsByIndex[mtl_i]; // Now we do not use this.
+        var mtl = mesh.materialsByIndex[mtl_i]; // Now we do not use this.
 
-        // 6. Draw
+        // 5. Calculate light model
+        var ambientProd = mult(mtl.ambient, gl.ambientLight.color);
+        var diffuseProd = mult(mtl.diffuse, gl.spotLight.color);
+        var lightPos = gl.spotLight.pos;
+
+        // 6. Assign uniform variables
+        gl.uniform3fv(gl.u_ambientProd, ambientProd);
+        gl.uniform3fv(gl.u_diffuseProd, diffuseProd);
+        gl.uniform4fv(gl.u_lightPos, lightPos);
+
+        // 7. Draw
         // TODO use one buffer and offset
         var buf = index_buffers[mtl_i].buffer;
         var type = index_buffers[mtl_i].type;
@@ -120,6 +140,7 @@ function bufferOneModel(gl, mesh) {
 function start(gl, canvas, program, meshs) {
     // This function is called after shaders are loaded
 
+    // =============WebGL config================
     // Configure WebGL
     if(!gl.getExtension("OES_element_index_uint")){
         console.warn("UNSIGNED_INT unsupported.");
@@ -129,14 +150,9 @@ function start(gl, canvas, program, meshs) {
     gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
     gl.enable(gl.DEPTH_TEST);
 
-    // Init matrix
+    // =============View================
+    // Init view matrix
     gl.view_mat = mat4([
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    ]);
-    var model_mat = mat4([
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
@@ -149,6 +165,7 @@ function start(gl, canvas, program, meshs) {
     };
     registView(canvas, onViewMatChange);
 
+    // =============Cache================
     // Buffer vertex data
     var buffers = {}
     for (const mesh_name of Object.keys(meshs))
@@ -159,7 +176,24 @@ function start(gl, canvas, program, meshs) {
     gl.a_norm = gl.getAttribLocation(program, "a_norm");
     gl.u_mvp_mat = gl.getUniformLocation(program, "u_mvp_mat");
     gl.u_norm_mat = gl.getUniformLocation(program, "u_norm_mat");
+    gl.u_ambientProd = gl.getUniformLocation(program, "u_ambientProd");
+    gl.u_diffuseProd = gl.getUniformLocation(program, "u_diffuseProd");
+    gl.u_lightPos = gl.getUniformLocation(program, "u_lightPos");
 
+    // =============Scene================
+    // Set Model Matrix
+    var model_mat = mat4([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    ]);
+
+    // Set Lights
+    gl.ambientLight = new Light(vec3(1.0, 1.0, 1.0), null);
+    gl.spotLight = new Light(vec3(1.0, 1.0, 1.0), vec4(-5, 5, -5, 1));
+
+    // =============Anime(Render)================
     // Regist Render work
     var render = function(){
         // Draw
