@@ -21,8 +21,14 @@
 ## color_cube
 [index.html](scratch\color_cube\index.html)
 
+## cover_two_points
+[index.html](scratch\cover_two_points\index.html)
+
 ## EightTriangles
 [index.html](scratch\EightTriangles\index.html)
+
+## load_model
+[index.html](scratch\load_model\index.html)
 
 ## Tetrahedron
 [index.html](scratch\Tetrahedron\index.html)
