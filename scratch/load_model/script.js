@@ -1,4 +1,5 @@
 import {downloadModels} from "../../lib/utils.js"
+import {loadProgram} from "../../lib/initShaders_v2.js"
 
 window.onload = function main() {
     // This function is called when html page is loaded
@@ -128,6 +129,12 @@ function bufferOneModel(gl, mesh) {
     };
 }
 
+function getLocations(gl, program, is_uniform, name_list) {
+    var function_name = is_uniform ? "getUniformLocation" : "getAttribLocation";
+    for (const name of name_list)
+        gl[name] = gl[function_name](program, name);
+}
+
 
 function start(gl, canvas, program, meshs) {
     // This function is called after shaders are loaded
@@ -165,18 +172,14 @@ function start(gl, canvas, program, meshs) {
         buffers[mesh_name] = bufferOneModel(gl, meshs[mesh_name]);
 
     // Get shader vars' location
-    gl.a_pos = gl.getAttribLocation(program, "a_pos");
-    gl.a_norm = gl.getAttribLocation(program, "a_norm");
-
-    gl.u_mvp_mat = gl.getUniformLocation(program, "u_mvp_mat");
-    gl.u_norm_mat = gl.getUniformLocation(program, "u_norm_mat");
-
-    gl.u_ambientProd = gl.getUniformLocation(program, "u_ambientProd");
-    gl.u_diffuseProd = gl.getUniformLocation(program, "u_diffuseProd");
-    gl.u_specularProd = gl.getUniformLocation(program, "u_specularProd");
-    gl.u_Ns = gl.getUniformLocation(program, "u_Ns");
-    gl.u_lightPos = gl.getUniformLocation(program, "u_lightPos");
-    gl.u_V = gl.getUniformLocation(program, "u_V");
+    getLocations(gl, program, false, [
+        "a_pos", "a_norm",
+    ]);
+    getLocations(gl, program, true, [
+        "u_mvp_mat", "u_norm_mat",
+        "u_ambientProd", "u_diffuseProd", "u_specularProd", "u_Ns",
+        "u_lightPos", "u_V",
+    ]);
 
     // =============Scene================
     // Set Model Matrix
