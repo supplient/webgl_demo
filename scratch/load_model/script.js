@@ -32,7 +32,7 @@ window.onload = function main() {
     );
     downloadModels([
         {
-            obj: "../../sources/cube.obj",
+            obj: "../../sources/two_mtl.obj",
             mtl: true,
         }
     ]).then(models => {
