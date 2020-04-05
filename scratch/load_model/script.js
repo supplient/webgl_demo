@@ -12,33 +12,20 @@ window.onload = function main() {
     }
 
     // 2. Asynchronously load shaders & models
-    var program_ready = false;
-    var mesh_ready = false;
-    var program = null;
-    var meshs = {};
-    function checkAllReady() {
-        // TODO This maybe should use Promise
-        if(program_ready && mesh_ready)
-            start(gl, canvas, program, meshs);
-    }
-
-    loadShaderSource(
-        "shader.vert", "shader.frag", 
-        function(vshadersrc, fshadersrc) {
-            program = createProgram(gl, vshadersrc, fshadersrc);
-            program_ready = true;
-            checkAllReady()
-        }
+    var load_shader = loadProgram(
+        gl, "shader.vert", "shader.frag"
     );
-    downloadModels([
+    var download_models = downloadModels([
         {
             obj: "../../sources/two_mtl.obj",
             mtl: true,
         }
-    ]).then(models => {
-        meshs = models;
-        mesh_ready = true;
-        checkAllReady();
+    ]);
+
+    Promise.all([load_shader, download_models]).then(values => {
+        var program = values[0];
+        var meshs = values[1];
+        start(gl, canvas, program, meshs);
     });
 };
 
