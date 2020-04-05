@@ -22,9 +22,7 @@ window.onload = function main() {
         }
     ]);
 
-    Promise.all([load_shader, download_models]).then(values => {
-        var program = values[0];
-        var meshs = values[1];
+    Promise.all([load_shader, download_models]).then(function([program, meshs]){
         start(gl, canvas, program, meshs);
     });
 };
