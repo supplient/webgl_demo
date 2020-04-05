@@ -50,12 +50,36 @@ function start(gl) {
     return;
   }
 
+  var verts = [
+    vec3(0, 0, 0.5),
+    vec3(0.01, 0.01, -0.5)
+  ];
+  var colors = [
+    vec3(1, 0, 0),
+    vec3(0, 0, 1)
+  ];
+
+  var color_buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(verts), gl.STATIC_DRAW);
+  var a_color = gl.getAttribLocation(gl.program, "a_pos");
+  gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_color);
+
+  var color_buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+  var a_color = gl.getAttribLocation(gl.program, "a_color");
+  gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_color);
+
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.enable(gl.DEPTH_TEST);
 
   // Clear <canvas>
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Draw the rectangle
-  gl.drawArrays(gl.POINTS, 0, 1);
+  gl.drawArrays(gl.POINTS, 0, 2);
 }
