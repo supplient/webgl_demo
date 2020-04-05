@@ -17,7 +17,8 @@ void main()
     
     vec4 ambient = vec4(u_ambientProd, 1.0);
 
-    vec4 diffuse = vec4(max(dot(L, N), 0.0) * u_ambientProd, 1.0);
+    vec4 diffuse = vec4(max(dot(L, N), 0.0) * u_diffuseProd, 1.0);
+
 
     gl_FragColor = ambient + diffuse;
 }
