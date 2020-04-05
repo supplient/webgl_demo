@@ -88,12 +88,18 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         // 5. Calculate light model
         var ambientProd = mult(mtl.ambient, gl.ambientLight.color);
         var diffuseProd = mult(mtl.diffuse, gl.spotLight.color);
+        var specularProd = mult(mtl.specular, gl.spotLight.color);
+        var Ns = mtl.specularExponent;
         var lightPos = mult(gl.proj_mat, gl.spotLight.pos);
+        var V = mult(gl.proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
         gl.uniform3fv(gl.u_ambientProd, ambientProd);
         gl.uniform3fv(gl.u_diffuseProd, diffuseProd);
+        gl.uniform3fv(gl.u_specularProd, specularProd);
+        gl.uniform1f(gl.u_Ns, Ns);
         gl.uniform4fv(gl.u_lightPos, lightPos);
+        gl.uniform4fv(gl.u_V, V);
 
         // 7. Draw
         // TODO use one buffer and offset
@@ -176,11 +182,16 @@ function start(gl, canvas, program, meshs) {
     // Get shader vars' location
     gl.a_pos = gl.getAttribLocation(program, "a_pos");
     gl.a_norm = gl.getAttribLocation(program, "a_norm");
+
     gl.u_mvp_mat = gl.getUniformLocation(program, "u_mvp_mat");
     gl.u_norm_mat = gl.getUniformLocation(program, "u_norm_mat");
+
     gl.u_ambientProd = gl.getUniformLocation(program, "u_ambientProd");
     gl.u_diffuseProd = gl.getUniformLocation(program, "u_diffuseProd");
+    gl.u_specularProd = gl.getUniformLocation(program, "u_specularProd");
+    gl.u_Ns = gl.getUniformLocation(program, "u_Ns");
     gl.u_lightPos = gl.getUniformLocation(program, "u_lightPos");
+    gl.u_V = gl.getUniformLocation(program, "u_V");
 
     // =============Scene================
     // Set Model Matrix
