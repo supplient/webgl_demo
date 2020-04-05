@@ -66,7 +66,8 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     gl.enableVertexAttribArray(gl.a_norm);
 
     // 3. Calculate mvp_mat & norm_nat
-    var mvp_mat = mult(gl.view_mat, model_mat);
+    var vp_mat = mult(gl.proj_mat, gl.view_mat);
+    var mvp_mat = mult(vp_mat, model_mat);
 
     var norm_mat = mat3(0);
     for(var i=0; i<3; i++) {
@@ -82,12 +83,12 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     // Draw material by material
     var index_buffers = buffer.indices;
     for(var mtl_i=0; mtl_i<index_buffers.length; mtl_i++) {
-        var mtl = mesh.materialsByIndex[mtl_i]; // Now we do not use this.
+        var mtl = mesh.materialsByIndex[mtl_i];
 
         // 5. Calculate light model
         var ambientProd = mult(mtl.ambient, gl.ambientLight.color);
         var diffuseProd = mult(mtl.diffuse, gl.spotLight.color);
-        var lightPos = gl.spotLight.pos;
+        var lightPos = mult(gl.proj_mat, gl.spotLight.pos);
 
         // 6. Assign uniform variables
         gl.uniform3fv(gl.u_ambientProd, ambientProd);
@@ -151,19 +152,20 @@ function start(gl, canvas, program, meshs) {
     gl.enable(gl.DEPTH_TEST);
 
     // =============View================
-    // Init view matrix
+    // Init view & projection matrix
     gl.view_mat = mat4([
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1
     ]);
+    gl.proj_mat = ortho(-1, 1, -1, 1, 1, -1); // Note we set z=1 is near to use right hand coordinate system
 
     // Regist view
     var onViewMatChange = function(view_mat) {
         gl.view_mat = view_mat;
     };
-    registView(canvas, onViewMatChange);
+    registView(canvas, onViewMatChange, true);
 
     // =============Cache================
     // Buffer vertex data
@@ -191,7 +193,7 @@ function start(gl, canvas, program, meshs) {
 
     // Set Lights
     gl.ambientLight = new Light(vec3(1.0, 1.0, 1.0), null);
-    gl.spotLight = new Light(vec3(1.0, 1.0, 1.0), vec4(-5, 5, -5, 1));
+    gl.spotLight = new Light(vec3(1.0, 1.0, 1.0), vec4(-1, 1, 1, 1));
 
     // =============Anime(Render)================
     // Regist Render work
