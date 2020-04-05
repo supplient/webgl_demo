@@ -88,7 +88,9 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         gl.uniform4fv(gl.u_V, V);
 
         // 7. Draw
-        // TODO use one buffer and offset
+        // OLD_TODO use one buffer and offset
+        // WHY_OLD we need to use different size of array to save different indice buffer, such as Uint8Array, Uint16Array.
+        //          so it is inconvenient to use one buffer.
         var buf = index_buffers[mtl_i].buffer;
         var type = index_buffers[mtl_i].type;
         var num = index_buffers[mtl_i].num;
@@ -98,26 +100,50 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
 }
 
 function bufferOneModel(gl, mesh) {
-    // 1. Buffer vertex & normals
-    var vert_buffer = gl.createBuffer();
-    var norm_buffer = gl.createBuffer();
+    // 0. Support functions
+    function bufferVertexArray(gl, data) {
+        var buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+        return buf;
+    }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vert_buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(mesh.vertices), gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, norm_buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(mesh.vertexNormals), gl.STATIC_DRAW);
+    // 1. Buffer vertices & normals
+    var vert_buffer = bufferVertexArray(gl, flatten(mesh.vertices));
+    var norm_buffer = bufferVertexArray(gl, flatten(mesh.vertexNormals));
 
     // 2. Buffer indices per material
     var index_buffers = []
     for (var mtl_i=0; mtl_i<mesh.indicesPerMaterial.length; mtl_i++) {
-        // TODO To judge whether to use Uint32, We need recognize the max in indices
         var indices = mesh.indicesPerMaterial[mtl_i];
+
+        var max_ind = Math.max(...indices);
+        var ind_type = null;
+        var ind_data = null;
+        if(max_ind < 2**8) {
+            ind_type = gl.UNSIGNED_BYTE;
+            ind_data = new Uint8Array(indices);
+        } 
+        else if(max_ind < 2**16) {
+            ind_type = gl.UNSIGNED_SHORT;
+            ind_data = new Uint16Array(indices);
+        }
+        else if(max_ind < 2**32) {
+            ind_type = gl.UNSIGNED_INT;
+            ind_data = new Uint32Array(indices);
+        }
+        else {
+            var mesh_name = mesh.name;
+            var mtl_name = mesh.materialNamesByIndex[mtl_i];
+            throw "Mesh \"" + mesh_name + "\" 's material \"" + mtl_name + "\" is using too many indices, which equals " + max_ind.toString() + ". The max of indices is 2^32.";
+        }
+
         var buf = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(indices), gl.STATIC_DRAW);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ind_data, gl.STATIC_DRAW);
         index_buffers[mtl_i] = {
             buffer: buf,
-            type: gl.UNSIGNED_BYTE,
+            type: ind_type,
             num: indices.length
         };
     }
