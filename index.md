@@ -1,3 +1,7 @@
+# demo
+## gimbal_lock
+[index.html](demo\gimbal_lock\index.html)
+
 # homework
 ## ch2
 [2_1.html](homework\ch2\2_1.html)
