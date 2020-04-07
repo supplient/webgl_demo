@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+    <title>Gimbal Lock</title>
+
+    <script type="text/javascript" src="../../lib/webgl-utils.js"></script>
+    <script type="text/javascript" src="../../lib/MV.js"></script>
+    <script type="text/javascript" src="../../lib/view.js"></script>
+    <script type="text/javascript" src="../../lib/Chart.min.js"></script>
+    <script type="module" src="script.js"></script>
+</head>
+
+<body>
+    <canvas id="webgl" style="display: inline;" width="512" height="512">
+    Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <canvas id="chart" style="display: inline;" width="700", height="512"></canvas>
+    <p>左边是在旋转的小熊，右边是它自身旋转角度的曲线图。<br>
+        小熊会绕世界的x,y,z轴同时旋转360度。（先乘x，再乘y，最后乘z）<br>
+        右边的曲线图是它在旋转过程中，自身俯仰(绕x轴)、偏航(绕y轴)、桶滚(绕z轴)的旋转数值。<br>
+        可以发现x和z的数值一样，而且在开头的时候变化很小，这就是万向节死锁问题，x和z的旋转效果被相互抵消了。<br>
+        我们是想要同时绕xyz轴旋转360度，结果是正确的，但是过程中却并不如预期。<br>
+        可以修改源码看看如果旋转顺序改为yzx会怎样（曲线图的形状不会发生变化，只是这次变成x和y相互抵消），
+        或者看看改成xzy会怎样（曲线图的形状会发生变化，我推测这是跟左手坐标系、右手坐标系有关）。
+        修改方法为在script.js中搜索"EDIT HERE"。
+    </p>
+    <p>
+        模型来自建模软件<a href="http://www.metaseq.net/en/">水仙</a>的教程样例。<br>
+        曲线图使用<a href="https://www.chartjs.org/">Chart.js</a>绘制。<br>
+        仅用于展示，若有侵权将立即删除，请至<a href="https://github.com/supplient/webgl_demo/issues">github的issue</a>告知。
+    </p>
+</body>
+</html>
