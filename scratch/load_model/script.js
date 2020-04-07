@@ -18,7 +18,7 @@ window.onload = function main() {
     );
     var download_models = downloadModels([
         {
-            obj: "../../sources/two_mtl.obj",
+            obj: "../../sources/bear.obj",
             mtl: true,
         }
     ]);
