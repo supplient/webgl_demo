@@ -18,8 +18,10 @@ window.onload = function main() {
     );
     var download_models = downloadModels([
         {
-            obj: "../../sources/bear.obj",
+            obj: "../../sources/dice.obj",
             mtl: true,
+            downloadMtlTextures: true,
+            mtlTextureRoot: "../../sources/texture",
         }
     ]);
 
@@ -50,6 +52,11 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer.norm);
     gl.vertexAttribPointer(gl.a_norm, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(gl.a_norm);
+    if(buffer.uv) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer.uv);
+        gl.vertexAttribPointer(gl.a_uv, buffer.uv_stride, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(gl.a_uv);
+    }
 
     // 3. Calculate mvp_mat & norm_nat
     var vp_mat = mult(gl.proj_mat, gl.view_mat);
@@ -87,7 +94,28 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         gl.uniform4fv(gl.u_lightPos, lightPos);
         gl.uniform4fv(gl.u_V, V);
 
-        // 7. Draw
+        // 7. Assign textures
+        var tex_units = [
+            gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2, gl.TEXTURE3, 
+            gl.TEXTURE4, gl.TEXTURE5, gl.TEXTURE6, gl.TEXTURE7
+        ];
+        var attrs = Object.keys(gl.tex_attr_map);
+        var names = Object.values(gl.tex_attr_map);
+        for(var i=0; i<attrs.length; i++) {
+            var mtl_tex = mtl[attrs[i]];
+            var switch_name = getTexSwitchVarName(names[i]);
+            if(!mtl_tex || !mtl_tex.filename) {
+                gl.uniform1i(gl[switch_name], false);
+            }
+            else {
+                gl.uniform1i(gl[switch_name], true);
+                gl.activeTexture(tex_units[i]);
+                gl.bindTexture(gl.TEXTURE_2D, mtl_tex.tex_obj);
+                gl.uniform1i(gl[getTexVarName(names[i])], i);
+            }
+        }
+
+        // 8. Draw
         // OLD_TODO use one buffer and offset
         // WHY_OLD we need to use different size of array to save different indice buffer, such as Uint8Array, Uint16Array.
         //          so it is inconvenient to use one buffer.
@@ -108,15 +136,19 @@ function bufferOneModel(gl, mesh) {
         return buf;
     }
 
-    // 1. Buffer vertices & normals
+    // 1. Buffer vertices, normals, uvs
     var vert_buffer = bufferVertexArray(gl, flatten(mesh.vertices));
     var norm_buffer = bufferVertexArray(gl, flatten(mesh.vertexNormals));
+    var uv_buffer = null;
+    if(mesh.textures.length > 0)
+        uv_buffer = bufferVertexArray(gl, flatten(mesh.textures));
 
     // 2. Buffer indices per material
     var index_buffers = []
     for (var mtl_i=0; mtl_i<mesh.indicesPerMaterial.length; mtl_i++) {
         var indices = mesh.indicesPerMaterial[mtl_i];
 
+        // Identify the max index to judge which data type to use
         var max_ind = Math.max(...indices);
         var ind_type = null;
         var ind_data = null;
@@ -148,11 +180,42 @@ function bufferOneModel(gl, mesh) {
         };
     }
 
-    return {
+    // 3. Buffer textures
+    if(uv_buffer) {
+        var mtls = Object.values(mesh.materialsByIndex);
+        for (var mtl_i=0; mtl_i<mtls.length; mtl_i++) {
+            var mtl = mesh.materialsByIndex[mtl_i];
+            for (const attr of Object.keys(gl.tex_attr_map)) {
+                const mtl_tex = mtl[attr];
+                if (!mtl_tex || !mtl_tex.filename) {
+                    continue;
+                }
+
+                // Create new texture object
+                var tex_obj = gl.createTexture();
+                // Buffer the image data
+                gl.bindTexture(gl.TEXTURE_2D, tex_obj);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, mtl_tex.texture);
+                gl.generateMipmap( gl.TEXTURE_2D );
+                // Save the object ref
+                mtl_tex.tex_obj = tex_obj;
+            }
+
+        }
+    }
+
+    var res = {
         vert: vert_buffer,
         norm: norm_buffer,
         indices: index_buffers
     };
+    if(uv_buffer) {
+        res.uv = uv_buffer;
+        res.uv_stride = mesh.textureStride;
+    }
+
+    return res;
 }
 
 function getLocations(gl, program, is_uniform, name_list) {
@@ -161,9 +224,28 @@ function getLocations(gl, program, is_uniform, name_list) {
         gl[name] = gl[function_name](program, name);
 }
 
+function getTexSwitchVarName(origin_name) {
+    return "u_switch_" + origin_name;
+}
+
+function getTexVarName(origin_name) {
+    return "s_" + origin_name;
+}
 
 function start(gl, canvas, program, meshs) {
     // This function is called after shaders are loaded
+
+    // =============My Frame Config================
+    gl.tex_attr_map = {
+        "mapDiffuse": "diffuse",
+        // "mapAmbient": "ambient",
+        // "mapSpecular": "specular",
+        // "mapDissolve": "dissolve",
+        // "mapBump": "bump",
+        // "mapDisplacement": "disp",
+        // "mapDecal": "decal",
+        // "mapEmissive": "emis",
+    };
 
     // =============WebGL config================
     // Configure WebGL
@@ -199,13 +281,19 @@ function start(gl, canvas, program, meshs) {
 
     // Get shader vars' location
     getLocations(gl, program, false, [
-        "a_pos", "a_norm",
+        "a_pos", "a_norm", "a_uv",
     ]);
     getLocations(gl, program, true, [
         "u_mvp_mat", "u_norm_mat",
         "u_ambientProd", "u_diffuseProd", "u_specularProd", "u_Ns",
         "u_lightPos", "u_V",
     ]);
+    var tex_var_names = [];
+    for (const name of Object.values(gl.tex_attr_map)) {
+        tex_var_names.push(getTexSwitchVarName(name));
+        tex_var_names.push(getTexVarName(name));
+    }
+    getLocations(gl, program, true, tex_var_names);
 
     // =============Scene================
     // Set Model Matrix

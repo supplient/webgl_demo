@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+    <title>2D Sierpinski Gasket</title>
+
+    <script type="text/javascript" src="../../lib/webgl-utils.js"></script>
+    <script type="text/javascript" src="../../lib/MV.js"></script>
+    <script type="text/javascript" src="../../lib/view.js"></script>
+    <script type="module" src="script.js"></script>
+</head>
+
+<body>
+    <canvas id="webgl" width="512" height="512">
+    Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <p>
+        1. 需要用texParameteri改一下TEXTURE_MIN_FILTER，因为默认使用最近的mipmap，没有mipmap的时候就不显示了。
+        2. 所用的纹理的原始尺寸必须为2的幂。
+    </p>
+</body>
+</html>
