@@ -34,6 +34,12 @@
 ## load_model
 [index.html](scratch\load_model\index.html)
 
+## project_dice
+[index.html](scratch\project_dice\index.html)
+
+## simple_tex
+[index.html](scratch\simple_tex\index.html)
+
 ## Tetrahedron
 [index.html](scratch\Tetrahedron\index.html)
 

@@ -14,5 +14,11 @@
     <canvas id="webgl" width="512" height="512">
     Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>
+    <p>
+        根据屏幕坐标计算纹理坐标，实现类似投影的效果。<br>
+        不过效果并不好，因为计算纹理坐标时是算的纹理投影平面的变换，
+        而实际上还需要再从纹理投影平面投影到实际要绘制的三角形上才对。<br>
+        要做到那样的话，就得跟画影子一样，先把视角切到光源那里，然后计算一次纹理坐标，再把视角切回来贴上纹理
+    </p>
 </body>
 </html>
