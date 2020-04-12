@@ -1,5 +1,5 @@
 import {downloadModels} from "../../lib/utils.js"
-import {loadProgram} from "../../lib/initShaders_v2.js"
+import {loadPrograms} from "../../lib/initShaders_v2.js"
 
 window.onload = function main() {
     // This function is called when html page is loaded
@@ -13,8 +13,10 @@ window.onload = function main() {
     }
 
     // 2. Asynchronously load shaders & models
-    var load_shader = loadProgram(
-        gl, "shader.vert", "shader.frag"
+    var load_shaders = loadPrograms(
+        gl, [
+            ["shader.vert", "shader.frag"],
+        ]
     );
     var download_models = downloadModels([
         {
@@ -25,8 +27,8 @@ window.onload = function main() {
         }
     ]);
 
-    Promise.all([load_shader, download_models]).then(function([program, meshs]){
-        start(gl, canvas, program, meshs);
+    Promise.all([load_shaders, download_models]).then(function([program, meshs]){
+        start(gl, canvas, programs, meshs);
     });
 };
 
@@ -41,7 +43,7 @@ class Light {
     }
 }
 
-function drawModel(gl, program, mesh, buffer, model_mat) {
+function drawModel(gl, program, mesh, buffer, model_mat, view_mat, proj_mat) {
     // 1. Select shaders
     gl.useProgram( program );
 
@@ -62,7 +64,7 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     }
 
     // 3. Calculate mvp_mat & norm_nat
-    var vp_mat = mult(gl.proj_mat, gl.view_mat);
+    var vp_mat = mult(proj_mat, view_mat);
     var mvp_mat = mult(vp_mat, model_mat);
 
     var norm_mat = mat3(0);
@@ -86,8 +88,8 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         var diffuseProd = mult(mtl.diffuse, gl.spotLight.color);
         var specularProd = mult(mtl.specular, gl.spotLight.color);
         var Ns = mtl.specularExponent;
-        var lightPos = mult(gl.proj_mat, gl.spotLight.pos);
-        var V = mult(gl.proj_mat, vec4(0, 0, 1, 1));
+        var lightPos = mult(proj_mat, gl.spotLight.pos);
+        var V = mult(proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
         gl.uniform3fv(program.u_ambientProd, ambientProd);
@@ -325,8 +327,9 @@ function getTexVarName(origin_name) {
     return "s_" + origin_name;
 }
 
-function start(gl, canvas, program, meshs) {
+function start(gl, canvas, programs, meshs) {
     // This function is called after shaders are loaded
+    var program = programs[0];
 
     // =============My Frame Config================
     gl.tex_attr_map = {
@@ -346,9 +349,6 @@ function start(gl, canvas, program, meshs) {
         console.warn("UNSIGNED_INT unsupported.");
         return;
     }
-    gl.viewport( 0, 0, canvas.width, canvas.height );
-    gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
-    gl.enable(gl.DEPTH_TEST);
 
     // =============View================
     // Init view & projection matrix
@@ -403,6 +403,9 @@ function start(gl, canvas, program, meshs) {
     // Regist Render work
     var render = function(){
         // Draw
+        gl.viewport( 0, 0, canvas.width, canvas.height );
+        gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+        gl.enable(gl.DEPTH_TEST);
         gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         for (const model_mat of model_mats) {
@@ -412,7 +415,9 @@ function start(gl, canvas, program, meshs) {
                 program, 
                 meshs[mesh_name], 
                 buffers[mesh_name],
-                model_mat
+                model_mat,
+                gl.view_mat,
+                gl.proj_mat
             );
         }
 
