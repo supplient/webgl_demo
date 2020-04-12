@@ -18,7 +18,7 @@ window.onload = function main() {
     );
     var download_models = downloadModels([
         {
-            obj: "../../sources/bump_surface.obj",
+            obj: "../../sources/dice.obj",
             mtl: true,
             downloadMtlTextures: true,
             mtlTextureRoot: "../../sources/texture",
@@ -51,14 +51,14 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         gl.vertexAttribPointer(pos, size, type, false, 0, 0);
         gl.enableVertexAttribArray(pos);
     }
-    assignAttrib(buffer.vert, 3, gl.FLOAT, gl.a_pos);
-    assignAttrib(buffer.norm, 3, gl.FLOAT, gl.a_norm);
+    assignAttrib(buffer.vert, 3, gl.FLOAT, program.a_pos);
+    assignAttrib(buffer.norm, 3, gl.FLOAT, program.a_norm);
     if(buffer.uv) {
-        assignAttrib(buffer.uv, buffer.uv_stride, gl.FLOAT, gl.a_uv);
+        assignAttrib(buffer.uv, buffer.uv_stride, gl.FLOAT, program.a_uv);
     }
     if(buffer.tan) {
-        assignAttrib(buffer.tan, 3, gl.FLOAT, gl.a_tan);
-        assignAttrib(buffer.bitan, 3, gl.FLOAT, gl.a_bitan);
+        assignAttrib(buffer.tan, 3, gl.FLOAT, program.a_tan);
+        assignAttrib(buffer.bitan, 3, gl.FLOAT, program.a_bitan);
     }
 
     // 3. Calculate mvp_mat & norm_nat
@@ -73,8 +73,8 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
     norm_mat = inverse3(transpose(norm_mat));
 
     // 4. Assign mvp_mat & norm_mat
-    gl.uniformMatrix4fv(gl.u_mvp_mat, false, flatten(mvp_mat));
-    gl.uniformMatrix3fv(gl.u_norm_mat, false, flatten(norm_mat));
+    gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
+    gl.uniformMatrix3fv(program.u_norm_mat, false, flatten(norm_mat));
 
     // Draw material by material
     var index_buffers = buffer.indices;
@@ -90,12 +90,12 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
         var V = mult(gl.proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
-        gl.uniform3fv(gl.u_ambientProd, ambientProd);
-        gl.uniform3fv(gl.u_diffuseProd, diffuseProd);
-        gl.uniform3fv(gl.u_specularProd, specularProd);
-        gl.uniform1f(gl.u_Ns, Ns);
-        gl.uniform4fv(gl.u_lightPos, lightPos);
-        gl.uniform4fv(gl.u_V, V);
+        gl.uniform3fv(program.u_ambientProd, ambientProd);
+        gl.uniform3fv(program.u_diffuseProd, diffuseProd);
+        gl.uniform3fv(program.u_specularProd, specularProd);
+        gl.uniform1f(program.u_Ns, Ns);
+        gl.uniform4fv(program.u_lightPos, lightPos);
+        gl.uniform4fv(program.u_V, V);
 
         // 7. Assign textures
         var tex_units = [
@@ -108,13 +108,13 @@ function drawModel(gl, program, mesh, buffer, model_mat) {
             var mtl_tex = mtl[attrs[i]];
             var switch_name = getTexSwitchVarName(names[i]);
             if(!mtl_tex || !mtl_tex.filename) {
-                gl.uniform1i(gl[switch_name], false);
+                gl.uniform1i(program[switch_name], false);
             }
             else {
-                gl.uniform1i(gl[switch_name], true);
+                gl.uniform1i(program[switch_name], true);
                 gl.activeTexture(tex_units[i]);
                 gl.bindTexture(gl.TEXTURE_2D, mtl_tex.tex_obj);
-                gl.uniform1i(gl[getTexVarName(names[i])], i);
+                gl.uniform1i(program[getTexVarName(names[i])], i);
             }
         }
 
@@ -314,7 +314,7 @@ function bufferOneModel(gl, mesh) {
 function getLocations(gl, program, is_uniform, name_list) {
     var function_name = is_uniform ? "getUniformLocation" : "getAttribLocation";
     for (const name of name_list)
-        gl[name] = gl[function_name](program, name);
+        program[name] = gl[function_name](program, name);
 }
 
 function getTexSwitchVarName(origin_name) {
@@ -390,12 +390,10 @@ function start(gl, canvas, program, meshs) {
 
     // =============Scene================
     // Set Model Matrix
-    var model_mat = mat4([
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    ]);
+    var model_mats = [
+        translate(-0.4, 0, 0),
+        translate(0.4, 0, 0),
+    ];
 
     // Set Lights
     gl.ambientLight = new Light(vec3(1.0, 1.0, 1.0), null);
@@ -407,7 +405,8 @@ function start(gl, canvas, program, meshs) {
         // Draw
         gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        for (const mesh_name of Object.keys(meshs)) {
+        for (const model_mat of model_mats) {
+            var mesh_name = Object.keys(meshs)[0];
             drawModel(
                 gl, 
                 program, 
