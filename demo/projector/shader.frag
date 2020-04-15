@@ -24,18 +24,49 @@ varying vec3 v_tan;
 varying vec3 v_bitan;
 varying vec4 v_pos_in_light;
 
+vec4 packDepth(const in float depth) {
+    if(depth >= 1.0) {
+        return vec4(1.0, 1.0, 1.0, 1.0);
+    }
+    const vec4 bitShift = vec4(1.0, 255.0, 255.0*255.0, 255.0*255.0*255.0);
+    const vec4 bitMask = vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0);
+    vec4 rgbaDepth = fract(depth * bitShift);
+    rgbaDepth -= rgbaDepth.gbaa * bitMask;
+    return rgbaDepth;
+}
+
 float unpackDepth(const in vec4 rgbaDepth) {
-    const vec4 bitShift = vec4(1.0, 1.0/256.0, 1.0/(256.0*256.0), 1.0/(256.0*256.0*256.0));
+    const vec4 bitShift = vec4(1.0, 1.0/255.0, 1.0/(255.0*255.0), 1.0/(255.0*255.0*255.0));
     float depth = dot(rgbaDepth, bitShift);
     return depth; 
 }
 
+int toInt(const in float x) {
+    float t = x * 255.0;
+    float s = fract(t);
+    int m;
+    if(s > 0.5) {
+        m = int(t) + 1;
+    } else {
+        m = int(t);
+    }
+    return m;
+}
+
+float toFloat(const in int x) {
+    return float(x) / 255.0;
+}
+
+ivec4 toRGBA(const in vec4 v) {
+    return ivec4(toInt(v.x), toInt(v.y), toInt(v.z), toInt(v.w));
+}
+
+vec4 toVec(const in ivec4 v) {
+    return vec4(toFloat(v.x), toFloat(v.y), toFloat(v.z), toFloat(v.w));
+}
+
 void main()
 {
-    vec3 pos_in_light = (v_pos_in_light.xyz / v_pos_in_light.w) / 2.0 + 0.5;
-    vec2 light_uv = pos_in_light.xy;
-    float light_depth = unpackDepth(texture2D(s_depth, light_uv));
-
     // Cal norm
     vec3 N = normalize(v_norm); // Surface normal
     if(u_switch_norm) { // If using norm texture
@@ -60,11 +91,62 @@ void main()
         diffuse = diffuse * texture2D(s_diffuse, v_uv);
     }
 
-    if(pos_in_light.z > light_depth + 0.05) {
+    // Check whether in shadow
+    vec3 pos_in_light = (v_pos_in_light.xyz / v_pos_in_light.w) / 2.0 + 0.5;
+    vec4 fdepth = packDepth(pos_in_light.z);
+    ivec4 depth = toRGBA(fdepth);
+
+    vec2 light_uv = pos_in_light.xy;
+    vec4 flight_depth = texture2D(s_depth, light_uv);
+    ivec4 light_depth = toRGBA(flight_depth);
+
+    bool in_shadow = false;
+    light_depth += 1;
+    if(
+        (depth.x > light_depth.x) ||
+        (depth.x == light_depth.x && depth.y > light_depth.y) ||
+        (depth.x == light_depth.x && depth.y == light_depth.y && depth.z > light_depth.z) ||
+        (depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w > light_depth.w)
+        ) {
+        in_shadow = true;
+    }
+
+    if(in_shadow) {
         gl_FragColor = ambient + 0.7*diffuse + 0.5*specular;
     }
     else {
         gl_FragColor = ambient + diffuse + specular;
     }
-    // gl_FragColor = vec4(vec3(light_depth), 1.0);
+
+    // if(in_shadow) {
+        // gl_FragColor = vec4(0.6, 0.0, 0.0, 1.0);
+    // }
+    // else {
+        // gl_FragColor = vec4(0.0, 0.0, 0.6, 1.0);
+    // }
+
+    // gl_FragColor = vec4(toVec(depth).xyz, 1.0);
+    // gl_FragColor = vec4(toVec(light_depth).xyz, 1.0);
+
+    // if(depth.x > light_depth.x) {
+        // gl_FragColor = vec4(0.5, 0.0, 0.0, 1.0); // Red
+    // } else if(depth.x == light_depth.x && depth.y > light_depth.y) {
+        // gl_FragColor = vec4(0.0, 0.5, 0.0, 1.0); // Green
+    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z > light_depth.z) {
+        // gl_FragColor = vec4(0.0, 0.0, 0.5, 1.0); // Blue
+    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w > light_depth.w) {
+        // gl_FragColor = vec4(0.5, 0.5, 0.0, 1.0); // Yellow
+    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w == light_depth.w) {
+        // gl_FragColor = vec4(0.0, 0.5, 0.5, 1.0); // Clyn
+    // } else if(depth.x < light_depth.x) {
+        // gl_FragColor = vec4(0.5, 0.0, 0.5, 1.0); // Purple
+    // } else if(depth.y < light_depth.y) {
+        // gl_FragColor = vec4(0.25, 0, 0, 1.0); // Small Red
+    // } else if(depth.z < light_depth.z) {
+        // gl_FragColor = vec4(0.0, 0.25, 0.0, 1.0); // Small Green
+    // } else if(depth.w < light_depth.w) {
+        // gl_FragColor = vec4(0.0, 0.0, 0.25, 1.0); // Small Blue
+    // } else {
+        // gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0); // White
+    // }
 }

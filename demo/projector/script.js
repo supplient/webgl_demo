@@ -438,8 +438,8 @@ function start(gl, canvas, programs, meshs) {
         buffers[mesh_name] = bufferOneModel(gl, meshs[mesh_name]);
     
     // Init FBO
-    gl.FBO_WIDTH = 512;
-    gl.FBO_HEIGHT = 512;
+    gl.FBO_WIDTH = canvas.width * 4;
+    gl.FBO_HEIGHT = canvas.height * 4;
     gl.fbo = gl.createFramebuffer();
 
     gl.fbo_tex = gl.createTexture();
@@ -447,6 +447,7 @@ function start(gl, canvas, programs, meshs) {
     gl.bindTexture(gl.TEXTURE_2D, gl.fbo_tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.FBO_WIDTH, gl.FBO_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
     var fbo_depth = gl.createRenderbuffer();
     gl.bindRenderbuffer(gl.RENDERBUFFER, fbo_depth);
@@ -493,7 +494,7 @@ function start(gl, canvas, programs, meshs) {
 
     // Set Lights
     gl.ambientLight = new AmbientLight(vec3(1.0, 1.0, 1.0));
-    gl.spotLight = new SpotLight(vec3(1.0, 1.0, 1.0), vec4(0.5, 0, 1, 1), 2);
+    gl.spotLight = new SpotLight(vec3(1.0, 1.0, 1.0), vec4(0.5, 0.5, 1, 1), 2);
 
     // =============Anime(Render)================
     // Regist Render work
@@ -514,7 +515,7 @@ function start(gl, canvas, programs, meshs) {
                 buffers[mesh_name],
                 model_mat,
                 gl.spotLight.getLightViewMat(
-                    vec3(0, 0, -1),
+                    vec3(0, 0, 0),
                     vec3(0, 1, 0)
                 ),
                 gl.spotLight.getLightProjMat()
