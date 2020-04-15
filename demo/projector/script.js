@@ -53,6 +53,10 @@ class SpotLight {
             return this.view_mat;
         }
         this.view_mat = lookAt(vec3(this.pos[0], this.pos[1], this.pos[2]), at, up);
+        this.view_mat = mult(
+            translate(0, 0, 1),
+            this.view_mat
+        );
         return this.view_mat;
     }
 
@@ -494,7 +498,21 @@ function start(gl, canvas, programs, meshs) {
 
     // Set Lights
     gl.ambientLight = new AmbientLight(vec3(1.0, 1.0, 1.0));
-    gl.spotLight = new SpotLight(vec3(1.0, 1.0, 1.0), vec4(0.5, 0.5, 1, 1), 2);
+    gl.spotLight = new SpotLight(
+        vec3(1.0, 1.0, 1.0), 
+        vec4(0, 0, -1, 1),
+        2
+    );
+
+    // TODO test
+    var vm = gl.spotLight.getLightViewMat(
+        vec3(0, 0, 0),
+        vec3(0, 1, 0)
+    );
+    var pm = gl.spotLight.getLightProjMat();
+    var p = vec4(0, 0, 0, 1);
+    p = mult(vm, p);
+    p = mult(pm, p);
 
     // =============Anime(Render)================
     // Regist Render work
