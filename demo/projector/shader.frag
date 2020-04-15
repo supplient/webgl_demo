@@ -112,7 +112,7 @@ void main()
     }
 
     if(in_shadow) {
-        gl_FragColor = ambient + 0.7*diffuse + 0.5*specular;
+        gl_FragColor = ambient;
     }
     else {
         gl_FragColor = ambient + diffuse + specular;
