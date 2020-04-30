@@ -168,7 +168,7 @@ function drawModel(gl, program, mesh, buffer,
         gl.uniform3fv(program.u_diffuseProd, diffuseProd);
         gl.uniform3fv(program.u_specularProd, specularProd);
         gl.uniform1f(program.u_Ns, Ns);
-        gl.uniform4fv(program.u_lightPos, lightPos);
+        gl.uniform3fv(program.u_lightPos, lightPos);
         gl.uniform4fv(program.u_V, V);
 
         // 7. Assign textures
@@ -500,7 +500,7 @@ function start(gl, canvas, programs, meshs) {
     gl.ambientLight = new AmbientLight(vec3(1.0, 1.0, 1.0));
     gl.spotLight = new SpotLight(
         vec3(1.0, 1.0, 1.0), 
-        vec4(0, 0, -1, 1),
+        vec3(0, 0, 1),
         2
     );
 

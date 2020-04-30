@@ -5,7 +5,7 @@ uniform vec3 u_diffuseProd;
 uniform vec3 u_specularProd;
 uniform float u_Ns;
 
-uniform vec4 u_lightPos;
+uniform vec3 u_lightPos;
 uniform vec4 u_V;
 
 uniform mat4 u_mvp_mat;
@@ -28,15 +28,15 @@ vec4 packDepth(const in float depth) {
     if(depth >= 1.0) {
         return vec4(1.0, 1.0, 1.0, 1.0);
     }
-    const vec4 bitShift = vec4(1.0, 255.0, 255.0*255.0, 255.0*255.0*255.0);
-    const vec4 bitMask = vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0);
+    const vec4 bitShift = vec4(1.0, 256.0, 256.0*256.0, 256.0*256.0*256.0);
+    const vec4 bitMask = vec4(1.0/256.0, 1.0/256.0, 1.0/256.0, 0);
     vec4 rgbaDepth = fract(depth * bitShift);
     rgbaDepth -= rgbaDepth.gbaa * bitMask;
     return rgbaDepth;
 }
 
 float unpackDepth(const in vec4 rgbaDepth) {
-    const vec4 bitShift = vec4(1.0, 1.0/255.0, 1.0/(255.0*255.0), 1.0/(255.0*255.0*255.0));
+    const vec4 bitShift = vec4(1.0, 1.0/256.0, 1.0/(256.0*256.0), 1.0/(256.0*256.0*256.0));
     float depth = dot(rgbaDepth, bitShift);
     return depth; 
 }
@@ -80,7 +80,8 @@ void main()
     }
     
     // Cal light model
-    vec3 L = normalize((u_mvp_mat * u_lightPos - v_pos).xyz); // Light vector
+    vec4 lightPos = u_mvp_mat * vec4(u_lightPos, 1.0);
+    vec3 L = normalize((lightPos - v_pos).xyz); // Light vector
     vec3 H = normalize(L+u_V.xyz); // Half angle vector
     vec4 ambient = vec4(u_ambientProd, 1.0);
     vec4 diffuse = vec4(max(dot(L, N), 0.0) * u_diffuseProd, 1.0);
@@ -101,7 +102,7 @@ void main()
     ivec4 light_depth = toRGBA(flight_depth);
 
     bool in_shadow = false;
-    light_depth += 1;
+    // light_depth.y += 1;
     if(
         (depth.x > light_depth.x) ||
         (depth.x == light_depth.x && depth.y > light_depth.y) ||
