@@ -39,29 +39,27 @@ class AmbientLight {
     }
 }
 
-class SpotLight {
-    constructor(color, pos, max_dist=1) {
+class DirectionalLight {
+    constructor(color, pos, at, max_dist=1) {
         this.color = color;
         this.pos = pos;
+        this.at = at;
         this.max_dist = max_dist;
     }
 
-    getLightViewMat(at=null, up=null) {
-        if(at==null) {
-            if(!this.view_mat)
-                throw "need assign at and up at first";
-            return this.view_mat;
-        }
-        this.view_mat = lookAt(vec3(this.pos[0], this.pos[1], this.pos[2]), at, up);
-        this.view_mat = mult(
-            translate(0, 0, 1),
-            this.view_mat
+    getLightViewMat() {
+        return lookAt(
+            this.pos, 
+            this.at, 
+            vec3(0, 1, 0)
         );
-        return this.view_mat;
     }
 
     getLightProjMat() {
-        return ortho(-this.max_dist, this.max_dist, -this.max_dist, this.max_dist, this.max_dist, -this.max_dist);
+        return ortho(
+            -this.max_dist, this.max_dist, 
+            -this.max_dist, this.max_dist, 
+            0, -this.max_dist*2);
     }
 }
 
@@ -131,8 +129,8 @@ function drawModel(gl, program, mesh, buffer,
     }
     norm_mat = inverse3(transpose(norm_mat));
 
-    var light_view_mat = gl.spotLight.getLightViewMat();
-    var light_proj_mat = gl.spotLight.getLightProjMat();
+    var light_view_mat = gl.dirLight.getLightViewMat();
+    var light_proj_mat = gl.dirLight.getLightProjMat();
     var light_vp_mat = mult(light_proj_mat, light_view_mat);
 
     // 4. Assign mvp_mat & norm_mat
@@ -157,10 +155,10 @@ function drawModel(gl, program, mesh, buffer,
 
         // 5. Calculate light model
         var ambientProd = mult(mtl.ambient, gl.ambientLight.color);
-        var diffuseProd = mult(mtl.diffuse, gl.spotLight.color);
-        var specularProd = mult(mtl.specular, gl.spotLight.color);
+        var diffuseProd = mult(mtl.diffuse, gl.dirLight.color);
+        var specularProd = mult(mtl.specular, gl.dirLight.color);
         var Ns = mtl.specularExponent;
-        var lightPos = gl.spotLight.pos;
+        var lightPos = gl.dirLight.pos;
         var V = mult(proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
@@ -498,21 +496,13 @@ function start(gl, canvas, programs, meshs) {
 
     // Set Lights
     gl.ambientLight = new AmbientLight(vec3(1.0, 1.0, 1.0));
-    gl.spotLight = new SpotLight(
+    var dirLightPos = vec3(0, 0, 1);
+    gl.dirLight = new DirectionalLight(
         vec3(1.0, 1.0, 1.0), 
-        vec3(0, 0, 1),
+        dirLightPos,
+        add(dirLightPos, vec3(0, 0, -1)),
         2
     );
-
-    // TODO test
-    var vm = gl.spotLight.getLightViewMat(
-        vec3(0, 0, 0),
-        vec3(0, 1, 0)
-    );
-    var pm = gl.spotLight.getLightProjMat();
-    var p = vec4(0, 0, 0, 1);
-    p = mult(vm, p);
-    p = mult(pm, p);
 
     // =============Anime(Render)================
     // Regist Render work
@@ -532,11 +522,11 @@ function start(gl, canvas, programs, meshs) {
                 meshs[mesh_name], 
                 buffers[mesh_name],
                 model_mat,
-                gl.spotLight.getLightViewMat(
+                gl.dirLight.getLightViewMat(
                     vec3(0, 0, 0),
                     vec3(0, 1, 0)
                 ),
-                gl.spotLight.getLightProjMat()
+                gl.dirLight.getLightProjMat()
             );
         }
 
