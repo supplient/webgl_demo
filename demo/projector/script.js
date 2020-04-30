@@ -70,17 +70,17 @@ function start(gl, canvas, programs, meshs) {
 
     // =============View================
     // Init view & projection matrix
-    gl.view_mat = mat4([
+    var view_mat = mat4([
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1
     ]);
-    gl.proj_mat = ortho(-1, 1, -1, 1, 1, -1); // Note we set z=1 is near to use right hand coordinate system
+    var proj_mat = ortho(-1, 1, -1, 1, 1, -1); // Note we set z=1 is near to use right hand coordinate system
 
     // Regist view
-    var onViewMatChange = function(view_mat) {
-        gl.view_mat = view_mat;
+    var onViewMatChange = function(new_view_mat) {
+        view_mat = new_view_mat;
     };
     registView(canvas, onViewMatChange, true);
 
@@ -91,28 +91,38 @@ function start(gl, canvas, programs, meshs) {
         buffers[mesh_name] = bufferOneModel(gl, meshs[mesh_name], tex_attr_map);
     
     // Init FBO
-    gl.FBO_WIDTH = canvas.width * 4;
-    gl.FBO_HEIGHT = canvas.height * 4;
-    gl.fbo = gl.createFramebuffer();
+    function initFBO() {
+        var FBO_WIDTH = canvas.width * 4;
+        var FBO_HEIGHT = canvas.height * 4;
+        var fbo = gl.createFramebuffer();
 
-    gl.fbo_tex = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE7);
-    gl.bindTexture(gl.TEXTURE_2D, gl.fbo_tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.FBO_WIDTH, gl.FBO_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        var fbo_tex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE7);
+        gl.bindTexture(gl.TEXTURE_2D, fbo_tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, FBO_WIDTH, FBO_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    var fbo_depth = gl.createRenderbuffer();
-    gl.bindRenderbuffer(gl.RENDERBUFFER, fbo_depth);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, gl.FBO_WIDTH, gl.FBO_HEIGHT);
+        var fbo_depth = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, fbo_depth);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, FBO_WIDTH, FBO_HEIGHT);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, gl.fbo);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, gl.fbo_tex, 0);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fbo_depth);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo_tex, 0);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fbo_depth);
 
-    var fbo_check = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    if(fbo_check != gl.FRAMEBUFFER_COMPLETE)
-        throw fbo_check.toString();
+        var fbo_check = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if(fbo_check != gl.FRAMEBUFFER_COMPLETE)
+            throw fbo_check.toString();
+
+        return {
+            height: FBO_HEIGHT,
+            width: FBO_WIDTH,
+            fbo: fbo,
+            fbo_tex: fbo_tex,
+        }
+    }
+    var dirShadowFBO = initFBO();
 
     // Get shader vars' location
     getLocations(gl, program, false, [
@@ -146,21 +156,25 @@ function start(gl, canvas, programs, meshs) {
     ];
 
     // Set Lights
-    gl.ambientLight = new AmbientLight(vec3(1.0, 1.0, 1.0));
     var dirLightPos = vec3(0, 0, 1);
-    gl.dirLight = new DirectionalLight(
-        vec3(1.0, 1.0, 1.0), 
-        dirLightPos,
-        add(dirLightPos, vec3(0, 0, -1)),
-        2
-    );
+    var lights = {
+        ambient: new AmbientLight(
+            vec3(1.0, 1.0, 1.0)
+        ),
+        direction: new DirectionalLight(
+            vec3(1.0, 1.0, 1.0),
+            dirLightPos,
+            add(dirLightPos, vec3(0, 0, -1)),
+            2
+        ),
+    }
 
     // =============Anime(Render)================
     // Regist Render work
     var render = function(){
         // Draw depth texture
-        gl.bindFramebuffer(gl.FRAMEBUFFER, gl.fbo);
-        gl.viewport(0, 0, gl.FBO_WIDTH, gl.FBO_HEIGHT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, dirShadowFBO.fbo);
+        gl.viewport(0, 0, dirShadowFBO.width, dirShadowFBO.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -173,11 +187,11 @@ function start(gl, canvas, programs, meshs) {
                 meshs[mesh_name], 
                 buffers[mesh_name],
                 model_mat,
-                gl.dirLight.getLightViewMat(
+                lights.direction.getLightViewMat(
                     vec3(0, 0, 0),
                     vec3(0, 1, 0)
                 ),
-                gl.dirLight.getLightProjMat()
+                lights.direction.getLightProjMat()
             );
         }
 
@@ -196,10 +210,11 @@ function start(gl, canvas, programs, meshs) {
                 meshs[mesh_name], 
                 buffers[mesh_name],
                 model_mat,
-                gl.view_mat,
-                gl.proj_mat,
+                view_mat,
+                proj_mat,
+                lights,
                 tex_attr_map,
-                gl.fbo_tex,
+                dirShadowFBO.fbo_tex,
             );
         }
 

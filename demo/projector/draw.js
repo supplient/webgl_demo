@@ -41,7 +41,7 @@ export function drawModel_deep(gl, program, mesh, buffer, model_mat, view_mat, p
 
 export function drawModel(gl, program, mesh, buffer, 
                     model_mat, view_mat, proj_mat,
-                    tex_attr_map, depth_tex
+                    lights, tex_attr_map, depth_tex
                     ) {
     // 1. Select shaders
     gl.useProgram( program );
@@ -68,8 +68,8 @@ export function drawModel(gl, program, mesh, buffer,
     }
     norm_mat = inverse3(transpose(norm_mat));
 
-    var light_view_mat = gl.dirLight.getLightViewMat();
-    var light_proj_mat = gl.dirLight.getLightProjMat();
+    var light_view_mat = lights.direction.getLightViewMat();
+    var light_proj_mat = lights.direction.getLightProjMat();
     var light_vp_mat = mult(light_proj_mat, light_view_mat);
 
     // 4. Assign mvp_mat & norm_mat
@@ -93,11 +93,11 @@ export function drawModel(gl, program, mesh, buffer,
         var mtl = mesh.materialsByIndex[mtl_i];
 
         // 5. Calculate light model
-        var ambientProd = mult(mtl.ambient, gl.ambientLight.color);
-        var diffuseProd = mult(mtl.diffuse, gl.dirLight.color);
-        var specularProd = mult(mtl.specular, gl.dirLight.color);
+        var ambientProd = mult(mtl.ambient, lights.ambient.color);
+        var diffuseProd = mult(mtl.diffuse, lights.direction.color);
+        var specularProd = mult(mtl.specular, lights.direction.color);
         var Ns = mtl.specularExponent;
-        var lightPos = gl.dirLight.pos;
+        var lightPos = lights.direction.pos;
         var V = mult(proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
