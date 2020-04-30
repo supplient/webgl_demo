@@ -5,17 +5,17 @@ export class AmbientLight {
 }
 
 export class DirectionalLight {
-    constructor(color, pos, at, max_dist=1) {
+    constructor(color, pos, direction, max_dist=1) {
         this.color = color;
         this.pos = pos;
-        this.at = at;
+        this.direction = direction;
         this.max_dist = max_dist;
     }
 
     getLightViewMat() {
         return lookAt(
             this.pos, 
-            this.at, 
+            add(this.pos, this.direction), 
             vec3(0, 1, 0)
         );
     }
@@ -25,5 +25,36 @@ export class DirectionalLight {
             -this.max_dist, this.max_dist, 
             -this.max_dist, this.max_dist, 
             0, -this.max_dist*2);
+    }
+}
+
+export class SpotLight {
+    constructor(color, pos, at,
+            inAngle, outAngle, 
+            far, near=0.01) {
+        this.color = color;
+        this.pos = pos;
+        this.at = at;
+        this.inAngle = inAngle;
+        this.outAngle = outAngle;
+        this.far = far;
+        this.near = near;
+    }
+
+    getLightViewMat() {
+        return lookAt(
+            this.pos,
+            this.at,
+            vec3(0, 1, 0)
+        );
+    }
+
+    getLightProjMat() {
+        return perspective(
+            this.outAngle * 2,
+            1,
+            this.near,
+            this.far
+        );
     }
 }

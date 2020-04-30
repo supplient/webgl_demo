@@ -41,7 +41,7 @@ export function drawModel_deep(gl, program, mesh, buffer, model_mat, view_mat, p
 
 export function drawModel(gl, program, mesh, buffer, 
                     model_mat, view_mat, proj_mat,
-                    lights, tex_attr_map, depth_tex
+                    lights, tex_attr_map, shadow_texs
                     ) {
     // 1. Select shaders
     gl.useProgram( program );
@@ -68,45 +68,74 @@ export function drawModel(gl, program, mesh, buffer,
     }
     norm_mat = inverse3(transpose(norm_mat));
 
-    var dirLight_view_mat = lights.direction.getLightViewMat();
-    var dirLight_proj_mat = lights.direction.getLightProjMat();
-    var dirLight_vp_mat = mult(dirLight_proj_mat, dirLight_view_mat);
+    var dirLight_vp_mat = mult(
+        lights.direction.getLightProjMat(),
+        lights.direction.getLightViewMat(), 
+    );
 
-    // 4. Assign mvp_mat & norm_mat
+    var spotLight_vp_mat = mult(
+        lights.spot.getLightProjMat(),
+        lights.spot.getLightViewMat(),
+    )
+
+    // 4. Assign transform matrixs
     gl.uniformMatrix4fv(program.u_model_mat, false, flatten(model_mat));
     gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
     gl.uniformMatrix3fv(program.u_norm_mat, false, flatten(norm_mat));
     gl.uniformMatrix4fv(program.u_dirLight_vp_mat, false, flatten(dirLight_vp_mat));
+    gl.uniformMatrix4fv(program.u_spotLight_vp_mat, false, flatten(spotLight_vp_mat));
 
-    // 4.5. Assign deep texture
+    // 4.5. Assign shadow texture
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, shadow_texs.spot);
+    gl.uniform1i(program.s_spotShadow, 6);
+
     gl.activeTexture(gl.TEXTURE7);
-    gl.bindTexture(gl.TEXTURE_2D, depth_tex);
-    gl.uniform1i(program.s_depth, 7);
+    gl.bindTexture(gl.TEXTURE_2D, shadow_texs.direction);
+    gl.uniform1i(program.s_dirShadow, 7);
 
+    // Draw material by material
     var tex_units = [
         gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2, gl.TEXTURE3, 
         gl.TEXTURE4, gl.TEXTURE5, gl.TEXTURE6, gl.TEXTURE7
     ];
-    // Draw material by material
     var index_buffers = buffer.indices;
     for(var mtl_i=0; mtl_i<index_buffers.length; mtl_i++) {
         var mtl = mesh.materialsByIndex[mtl_i];
 
         // 5. Calculate light model
         var ambientProd = mult(mtl.ambient, lights.ambient.color);
-        var diffuseProd = mult(mtl.diffuse, lights.direction.color);
-        var specularProd = mult(mtl.specular, lights.direction.color);
+
+        var dirLightDir = lights.direction.direction;
+        var dirDiffProd = mult(mtl.diffuse, lights.direction.color);
+        var dirSpecProd = mult(mtl.specular, lights.direction.color);
+
+        var spotLightPos = lights.spot.pos;
+        var spotLightDir = subtract(lights.spot.at, lights.spot.pos);
+        var spotInCos = Math.cos(lights.spot.inAngle/180*Math.PI);
+        var spotOutCos = Math.cos(lights.spot.outAngle/180*Math.PI);
+        var spotDiffProd = mult(mtl.diffuse, lights.spot.color);
+        var spotSpecProd = mult(mtl.specular, lights.spot.color);
+
         var Ns = mtl.specularExponent;
-        var dirLightPos = lights.direction.pos;
-        var V = mult(proj_mat, vec4(0, 0, 1, 1));
+        var viewPos = mult(proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
         gl.uniform3fv(program.u_ambientProd, ambientProd);
-        gl.uniform3fv(program.u_diffuseProd, diffuseProd);
-        gl.uniform3fv(program.u_specularProd, specularProd);
+
+        gl.uniform3fv(program.u_dirLightDir, dirLightDir);
+        gl.uniform3fv(program.u_dirDiffProd, dirDiffProd);
+        gl.uniform3fv(program.u_dirSpecProd, dirSpecProd);
+
+        gl.uniform3fv(program.u_spotLightPos, spotLightPos);
+        gl.uniform3fv(program.u_spotLightDir, spotLightDir);
+        gl.uniform1f(program.u_spotInCos, spotInCos);
+        gl.uniform1f(program.u_spotOutCos, spotOutCos);
+        gl.uniform3fv(program.u_spotDiffProd, spotDiffProd);
+        gl.uniform3fv(program.u_spotSpecProd, spotSpecProd);
+
         gl.uniform1f(program.u_Ns, Ns);
-        gl.uniform3fv(program.u_dirLightPos, dirLightPos);
-        gl.uniform4fv(program.u_V, V);
+        gl.uniform4fv(program.u_viewPos, viewPos);
 
         // 7. Assign textures
         var attrs = Object.keys(tex_attr_map);

@@ -1,6 +1,6 @@
 import {downloadModels} from "../../lib/utils.js"
 import {loadPrograms} from "../../lib/initShaders_v2.js"
-import {AmbientLight, DirectionalLight} from "./light.js"
+import {AmbientLight, DirectionalLight, SpotLight} from "./light.js"
 import {bufferOneModel} from "./buffer.js"
 import {getTexSwitchVarName, getTexVarName, drawModel_deep, drawModel} from "./draw.js"
 
@@ -123,16 +123,20 @@ function start(gl, canvas, programs, meshs) {
         }
     }
     var dirShadowFBO = initFBO();
+    var spotShadowFBO = initFBO();
 
     // Get shader vars' location
     getLocations(gl, program, false, [
         "a_pos", "a_norm", "a_uv", "a_tan", "a_bitan",
     ]);
     getLocations(gl, program, true, [
-        "u_model_mat", "u_mvp_mat", "u_norm_mat", "u_dirLight_vp_mat",
-        "u_ambientProd", "u_diffuseProd", "u_specularProd", "u_Ns",
-        "u_dirLightPos", "u_V",
-        "s_depth",
+        "u_model_mat", "u_mvp_mat", "u_norm_mat", 
+        "u_dirLight_vp_mat", "u_spotLight_vp_mat",
+        "u_ambientProd", 
+        "u_dirLightDir", "u_dirDiffProd", "u_dirSpecProd", 
+        "u_spotLightPos", "u_spotLightDir", "u_spotInCos", "u_spotOutCos", "u_spotDiffProd", "u_spotSpecProd",
+        "u_Ns", "u_viewPos",
+        "s_spotShadow", "s_dirShadow",
     ]);
     var tex_var_names = [];
     for (const name of Object.values(tex_attr_map)) {
@@ -156,23 +160,31 @@ function start(gl, canvas, programs, meshs) {
     ];
 
     // Set Lights
-    var dirLightPos = vec3(0, 0, 1);
     var lights = {
         ambient: new AmbientLight(
             vec3(1.0, 1.0, 1.0)
         ),
         direction: new DirectionalLight(
             vec3(1.0, 1.0, 1.0),
-            dirLightPos,
-            add(dirLightPos, vec3(0, 0, -1)),
+            vec3(0, 0, 1),
+            vec3(0, 0, -1),
             2
+        ),
+        spot: new SpotLight(
+            vec3(1.0, 0, 0),
+            vec3(0, 0, 3),
+            vec3(0, 0, 0),
+            30,
+            40,
+            10,
+            0.05,
         ),
     }
 
     // =============Anime(Render)================
     // Regist Render work
     var render = function(){
-        // Draw depth texture
+        // Draw directional light's depth texture
         gl.bindFramebuffer(gl.FRAMEBUFFER, dirShadowFBO.fbo);
         gl.viewport(0, 0, dirShadowFBO.width, dirShadowFBO.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -187,11 +199,30 @@ function start(gl, canvas, programs, meshs) {
                 meshs[mesh_name], 
                 buffers[mesh_name],
                 model_mat,
-                lights.direction.getLightViewMat(
-                    vec3(0, 0, 0),
-                    vec3(0, 1, 0)
-                ),
+                lights.direction.getLightViewMat(),
                 lights.direction.getLightProjMat()
+            );
+        }
+
+        // Draw spot light's depth texture
+        // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // gl.viewport( 0, 0, canvas.width, canvas.height );
+        gl.bindFramebuffer(gl.FRAMEBUFFER, spotShadowFBO.fbo);
+        gl.viewport(0, 0, spotShadowFBO.width, spotShadowFBO.height);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        for (const model_mat of model_mats) {
+            var mesh_name = Object.keys(meshs)[0];
+            drawModel_deep(
+                gl, 
+                deep_prog, 
+                meshs[mesh_name], 
+                buffers[mesh_name],
+                model_mat,
+                lights.spot.getLightViewMat(),
+                lights.spot.getLightProjMat()
             );
         }
 
@@ -214,7 +245,10 @@ function start(gl, canvas, programs, meshs) {
                 proj_mat,
                 lights,
                 tex_attr_map,
-                dirShadowFBO.fbo_tex,
+                {
+                    direction: dirShadowFBO.fbo_tex,
+                    spot: spotShadowFBO.fbo_tex,
+                }
             );
         }
 
