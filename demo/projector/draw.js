@@ -41,7 +41,7 @@ export function drawModel_deep(gl, program, mesh, buffer, model_mat, view_mat, p
 
 export function drawModel(gl, program, mesh, buffer, 
                     model_mat, view_mat, proj_mat,
-                    depth_tex
+                    tex_attr_map, depth_tex
                     ) {
     // 1. Select shaders
     gl.useProgram( program );
@@ -109,8 +109,8 @@ export function drawModel(gl, program, mesh, buffer,
         gl.uniform4fv(program.u_V, V);
 
         // 7. Assign textures
-        var attrs = Object.keys(gl.tex_attr_map);
-        var names = Object.values(gl.tex_attr_map);
+        var attrs = Object.keys(tex_attr_map);
+        var names = Object.values(tex_attr_map);
         for(var i=0; i<attrs.length; i++) {
             var mtl_tex = mtl[attrs[i]];
             var switch_name = getTexSwitchVarName(names[i]);

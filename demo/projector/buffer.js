@@ -5,7 +5,7 @@ function bufferVertexArray(gl, data) {
     return buf;
 }
 
-export function bufferOneModel(gl, mesh) {
+export function bufferOneModel(gl, mesh, tex_attr_map) {
     // 1. Buffer vertices, normals, uvs
     var vert_buffer = bufferVertexArray(gl, flatten(mesh.vertices));
     var norm_buffer = bufferVertexArray(gl, flatten(mesh.vertexNormals));
@@ -56,7 +56,7 @@ export function bufferOneModel(gl, mesh) {
         var mtls = Object.values(mesh.materialsByIndex);
         for (var mtl_i=0; mtl_i<mtls.length; mtl_i++) {
             var mtl = mesh.materialsByIndex[mtl_i];
-            for (const attr of Object.keys(gl.tex_attr_map)) {
+            for (const attr of Object.keys(tex_attr_map)) {
                 const mtl_tex = mtl[attr];
                 if (!mtl_tex || !mtl_tex.filename) {
                     continue;

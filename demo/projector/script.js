@@ -50,7 +50,7 @@ function start(gl, canvas, programs, meshs) {
     var deep_prog = programs[1];
 
     // =============My Config================
-    gl.tex_attr_map = {
+    var tex_attr_map = {
         "mapDiffuse": "diffuse",
         // "mapAmbient": "ambient",
         // "mapSpecular": "specular",
@@ -88,7 +88,7 @@ function start(gl, canvas, programs, meshs) {
     // Buffer vertex data
     var buffers = {}
     for (const mesh_name of Object.keys(meshs))
-        buffers[mesh_name] = bufferOneModel(gl, meshs[mesh_name]);
+        buffers[mesh_name] = bufferOneModel(gl, meshs[mesh_name], tex_attr_map);
     
     // Init FBO
     gl.FBO_WIDTH = canvas.width * 4;
@@ -125,7 +125,7 @@ function start(gl, canvas, programs, meshs) {
         "s_depth",
     ]);
     var tex_var_names = [];
-    for (const name of Object.values(gl.tex_attr_map)) {
+    for (const name of Object.values(tex_attr_map)) {
         tex_var_names.push(getTexSwitchVarName(name));
         tex_var_names.push(getTexVarName(name));
     }
@@ -198,7 +198,8 @@ function start(gl, canvas, programs, meshs) {
                 model_mat,
                 gl.view_mat,
                 gl.proj_mat,
-                gl.fbo_tex
+                tex_attr_map,
+                gl.fbo_tex,
             );
         }
 
