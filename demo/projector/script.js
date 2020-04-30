@@ -1,5 +1,6 @@
 import {downloadModels} from "../../lib/utils.js"
 import {loadPrograms} from "../../lib/initShaders_v2.js"
+import {AmbientLight, DirectionalLight} from "./light.js"
 
 window.onload = function main() {
     // This function is called when html page is loaded
@@ -32,36 +33,6 @@ window.onload = function main() {
         start(gl, canvas, programs, meshs);
     });
 };
-
-class AmbientLight {
-    constructor(color) {
-        this.color = color;
-    }
-}
-
-class DirectionalLight {
-    constructor(color, pos, at, max_dist=1) {
-        this.color = color;
-        this.pos = pos;
-        this.at = at;
-        this.max_dist = max_dist;
-    }
-
-    getLightViewMat() {
-        return lookAt(
-            this.pos, 
-            this.at, 
-            vec3(0, 1, 0)
-        );
-    }
-
-    getLightProjMat() {
-        return ortho(
-            -this.max_dist, this.max_dist, 
-            -this.max_dist, this.max_dist, 
-            0, -this.max_dist*2);
-    }
-}
 
 function drawModel_deep(gl, program, mesh, buffer, model_mat, view_mat, proj_mat) {
     // 1. Select shaders
