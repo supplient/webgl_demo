@@ -68,15 +68,15 @@ export function drawModel(gl, program, mesh, buffer,
     }
     norm_mat = inverse3(transpose(norm_mat));
 
-    var light_view_mat = lights.direction.getLightViewMat();
-    var light_proj_mat = lights.direction.getLightProjMat();
-    var light_vp_mat = mult(light_proj_mat, light_view_mat);
+    var dirLight_view_mat = lights.direction.getLightViewMat();
+    var dirLight_proj_mat = lights.direction.getLightProjMat();
+    var dirLight_vp_mat = mult(dirLight_proj_mat, dirLight_view_mat);
 
     // 4. Assign mvp_mat & norm_mat
     gl.uniformMatrix4fv(program.u_model_mat, false, flatten(model_mat));
     gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
     gl.uniformMatrix3fv(program.u_norm_mat, false, flatten(norm_mat));
-    gl.uniformMatrix4fv(program.u_light_vp_mat, false, flatten(light_vp_mat));
+    gl.uniformMatrix4fv(program.u_dirLight_vp_mat, false, flatten(dirLight_vp_mat));
 
     // 4.5. Assign deep texture
     gl.activeTexture(gl.TEXTURE7);
@@ -97,7 +97,7 @@ export function drawModel(gl, program, mesh, buffer,
         var diffuseProd = mult(mtl.diffuse, lights.direction.color);
         var specularProd = mult(mtl.specular, lights.direction.color);
         var Ns = mtl.specularExponent;
-        var lightPos = lights.direction.pos;
+        var dirLightPos = lights.direction.pos;
         var V = mult(proj_mat, vec4(0, 0, 1, 1));
 
         // 6. Assign uniform variables
@@ -105,7 +105,7 @@ export function drawModel(gl, program, mesh, buffer,
         gl.uniform3fv(program.u_diffuseProd, diffuseProd);
         gl.uniform3fv(program.u_specularProd, specularProd);
         gl.uniform1f(program.u_Ns, Ns);
-        gl.uniform3fv(program.u_lightPos, lightPos);
+        gl.uniform3fv(program.u_dirLightPos, dirLightPos);
         gl.uniform4fv(program.u_V, V);
 
         // 7. Assign textures

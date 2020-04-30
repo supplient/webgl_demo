@@ -129,9 +129,9 @@ function start(gl, canvas, programs, meshs) {
         "a_pos", "a_norm", "a_uv", "a_tan", "a_bitan",
     ]);
     getLocations(gl, program, true, [
-        "u_model_mat", "u_mvp_mat", "u_norm_mat", "u_light_vp_mat",
+        "u_model_mat", "u_mvp_mat", "u_norm_mat", "u_dirLight_vp_mat",
         "u_ambientProd", "u_diffuseProd", "u_specularProd", "u_Ns",
-        "u_lightPos", "u_V",
+        "u_dirLightPos", "u_V",
         "s_depth",
     ]);
     var tex_var_names = [];

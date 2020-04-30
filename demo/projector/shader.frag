@@ -5,7 +5,7 @@ uniform vec3 u_diffuseProd;
 uniform vec3 u_specularProd;
 uniform float u_Ns;
 
-uniform vec3 u_lightPos;
+uniform vec3 u_dirLightPos;
 uniform vec4 u_V;
 
 uniform mat4 u_mvp_mat;
@@ -22,7 +22,7 @@ varying vec4 v_pos;
 varying vec2 v_uv;
 varying vec3 v_tan;
 varying vec3 v_bitan;
-varying vec4 v_pos_in_light;
+varying vec4 v_pos_in_dirLight;
 
 vec4 packDepth(const in float depth) {
     if(depth >= 1.0) {
@@ -80,8 +80,8 @@ void main()
     }
     
     // Cal light model
-    vec4 lightPos = u_mvp_mat * vec4(u_lightPos, 1.0);
-    vec3 L = normalize((lightPos - v_pos).xyz); // Light vector
+    vec4 dirLightPos = u_mvp_mat * vec4(u_dirLightPos, 1.0);
+    vec3 L = normalize((dirLightPos - v_pos).xyz); // Light vector
     vec3 H = normalize(L+u_V.xyz); // Half angle vector
     vec4 ambient = vec4(u_ambientProd, 1.0);
     vec4 diffuse = vec4(max(dot(L, N), 0.0) * u_diffuseProd, 1.0);
@@ -93,7 +93,7 @@ void main()
     }
 
     // Check whether in shadow
-    vec3 pos_in_light = (v_pos_in_light.xyz / v_pos_in_light.w) / 2.0 + 0.5;
+    vec3 pos_in_light = (v_pos_in_dirLight.xyz / v_pos_in_dirLight.w) / 2.0 + 0.5;
     vec4 fdepth = packDepth(pos_in_light.z);
     ivec4 depth = toRGBA(fdepth);
 
