@@ -41,6 +41,15 @@ export class SpotLight {
         this.near = near;
     }
 
+    getPosVec4() {
+        return vec4(
+            this.pos[0],
+            this.pos[1],
+            this.pos[2],
+            1.0
+        );
+    }
+
     getLightViewMat() {
         return lookAt(
             this.pos,

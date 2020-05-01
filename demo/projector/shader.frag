@@ -4,17 +4,21 @@ precision highp float;
 uniform vec3 u_ambientProd;
 
 // directional light
+uniform bool u_switch_direction;
 uniform vec3 u_dirLightDir;
 uniform vec3 u_dirDiffProd;
 uniform vec3 u_dirSpecProd;
+uniform sampler2D s_dirShadow;
 
 // spot light
-uniform vec3 u_spotLightPos;
+uniform bool u_switch_spot;
+uniform vec4 u_spotLightPos;
 uniform vec3 u_spotLightDir;
 uniform float u_spotInCos;
 uniform float u_spotOutCos;
 uniform vec3 u_spotDiffProd;
 uniform vec3 u_spotSpecProd;
+uniform sampler2D s_spotShadow;
 
 // other light model parameters
 uniform float u_Ns;
@@ -29,10 +33,6 @@ uniform bool u_switch_diffuse;
 uniform sampler2D s_diffuse;
 uniform bool u_switch_norm;
 uniform sampler2D s_norm;
-
-// depth textures
-uniform sampler2D s_dirShadow;
-uniform sampler2D s_spotShadow;
 
 // varying
 varying vec3 v_norm;
@@ -128,43 +128,41 @@ void main()
     vec4 ambient = vec4(u_ambientProd, 1.0);
 
     /// DirectionalLight
-    // TODO Move dirLightDir, dirLightHalf's calculating to js
-    vec3 dirLightDir = normalize(u_vec_mat * (-u_dirLightDir)); // Light vector
-    vec3 dirLightHalf = normalize(dirLightDir + viewForw); // Half angle vector
-    vec3 dirDiff = max(dot(dirLightDir, N), 0.0) * u_dirDiffProd;
-    vec3 dirSpec = pow(max(dot(N, dirLightHalf), 0.0), u_Ns) * u_dirSpecProd;
-    
-    //// Check DirectionalLight's shadow
-    if(!inShadow(
-            v_pos_in_dirLight, s_dirShadow,
-            dirLightDir, N, 0.005
-            )
-        ) {
-        diffColor += dirDiff;
-        specColor += dirSpec;
+    if(u_switch_direction) {
+        vec3 dirLightHalf = normalize(u_dirLightDir + viewForw); // Half angle vector
+        vec3 dirDiff = max(dot(N, u_dirLightDir), 0.0) * u_dirDiffProd;
+        vec3 dirSpec = pow(max(dot(N, dirLightHalf), 0.0), u_Ns) * u_dirSpecProd;
+        
+        //// Check DirectionalLight's shadow
+        if(!inShadow(
+                v_pos_in_dirLight, s_dirShadow,
+                u_dirLightDir, N, 0.0005
+                )
+            ) {
+            diffColor += dirDiff;
+            specColor += dirSpec;
+        }
     }
 
     /// SpotLight
-    vec4 spotLightPos = u_vp_mat * vec4(u_spotLightPos, 1.0);
-    vec3 spotForw = normalize((spotLightPos - v_pos).xyz);
-    vec3 spotLightDir = normalize(u_vec_mat * (-u_spotLightDir));
-    float spotFragCos = dot(spotForw, spotLightDir);
-    float spotIntensity = clamp((spotFragCos - u_spotOutCos)/(u_spotInCos - u_spotOutCos), 0.0, 1.0);
-    vec3 spotLightHalf = normalize(spotForw + viewForw);
-    vec3 spotDiff = max(dot(spotForw, N), 0.0) * u_spotDiffProd * spotIntensity;
-    vec3 spotSpec = pow(max(dot(N, spotLightHalf), 0.0), u_Ns) * u_spotSpecProd * spotIntensity;
+    if(u_switch_spot) {
+        vec3 spotForw = normalize((u_spotLightPos - v_pos).xyz);
+        float spotFragCos = dot(spotForw, u_spotLightDir);
+        float spotIntensity = clamp((spotFragCos - u_spotOutCos)/(u_spotInCos - u_spotOutCos), 0.0, 1.0);
+        vec3 spotLightHalf = normalize(spotForw + viewForw);
+        vec3 spotDiff = max(dot(N, spotForw), 0.0) * u_spotDiffProd * spotIntensity;
+        vec3 spotSpec = pow(max(dot(N, spotLightHalf), 0.0), u_Ns) * u_spotSpecProd * spotIntensity;
 
-    //// Check whether in SpotLight's shadow
-    if(!inShadow(
-            v_pos_in_spotLight, s_spotShadow,
-            spotForw, N, 0.005
-            )
-        ) {
-        // diffColor += spotDiff;
-        // specColor += spotSpec;
+        //// Check whether in SpotLight's shadow
+        if(!inShadow(
+                v_pos_in_spotLight, s_spotShadow,
+                spotForw, N, 0.005
+                )
+            ) {
+            diffColor += spotDiff;
+            specColor += spotSpec;
+        }
     }
-        diffColor += spotDiff;
-        specColor += spotSpec;
 
     vec4 diffuse = vec4(diffColor, 1.0);
     vec4 specular = vec4(specColor, 1.0);
@@ -175,13 +173,6 @@ void main()
     }
 
     gl_FragColor = ambient + diffuse + specular;
-
-    // if(in_shadow) {
-        // gl_FragColor = vec4(0.6, 0.0, 0.0, 1.0);
-    // }
-    // else {
-        // gl_FragColor = vec4(0.0, 0.0, 0.6, 1.0);
-    // }
 
     // gl_FragColor = vec4(toVec(depth).xyz, 1.0);
     // gl_FragColor = vec4(toVec(light_depth).xyz, 1.0);

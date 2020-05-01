@@ -134,8 +134,8 @@ function start(gl, canvas, programs, meshs) {
         "u_norm_mat", "u_vec_mat",
         "u_dirLight_vp_mat", "u_spotLight_vp_mat",
         "u_ambientProd", 
-        "u_dirLightDir", "u_dirDiffProd", "u_dirSpecProd", 
-        "u_spotLightPos", "u_spotLightDir", "u_spotInCos", "u_spotOutCos", "u_spotDiffProd", "u_spotSpecProd",
+        "u_switch_direction", "u_dirLightDir", "u_dirDiffProd", "u_dirSpecProd", 
+        "u_switch_spot", "u_spotLightPos", "u_spotLightDir", "u_spotInCos", "u_spotOutCos", "u_spotDiffProd", "u_spotSpecProd",
         "u_Ns", "u_viewPos",
         "s_spotShadow", "s_dirShadow",
     ]);
@@ -166,18 +166,17 @@ function start(gl, canvas, programs, meshs) {
             vec3(1.0, 1.0, 1.0)
         ),
         direction: new DirectionalLight(
-            // vec3(1.0, 1.0, 1.0),
-            vec3(0, 0, 0),
+            vec3(1.0, 1.0, 1.0),
             vec3(0, 0, 1),
             vec3(0, 0, -1),
             2
         ),
         spot: new SpotLight(
-            vec3(1.0, 1.0, 1.0),
-            vec3(1, 0, -0.5),
+            vec3(0.6, 0.3, 0.4),
+            vec3(3, 0, 3),
             vec3(0, 0, 0),
-            2,
-            3,
+            5,
+            7,
             10,
             0.05,
         ),
@@ -187,45 +186,47 @@ function start(gl, canvas, programs, meshs) {
     // Regist Render work
     var render = function(){
         // Draw directional light's depth texture
-        gl.bindFramebuffer(gl.FRAMEBUFFER, dirShadowFBO.fbo);
-        gl.viewport(0, 0, dirShadowFBO.width, dirShadowFBO.height);
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        if(lights.direction) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, dirShadowFBO.fbo);
+            gl.viewport(0, 0, dirShadowFBO.width, dirShadowFBO.height);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        for (const model_mat of model_mats) {
-            var mesh_name = Object.keys(meshs)[0];
-            drawModel_deep(
-                gl, 
-                deep_prog, 
-                meshs[mesh_name], 
-                buffers[mesh_name],
-                model_mat,
-                lights.direction.getLightViewMat(),
-                lights.direction.getLightProjMat()
-            );
+            for (const model_mat of model_mats) {
+                var mesh_name = Object.keys(meshs)[0];
+                drawModel_deep(
+                    gl, 
+                    deep_prog, 
+                    meshs[mesh_name], 
+                    buffers[mesh_name],
+                    model_mat,
+                    lights.direction.getLightViewMat(),
+                    lights.direction.getLightProjMat()
+                );
+            }
         }
 
         // Draw spot light's depth texture
-        // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        // gl.viewport( 0, 0, canvas.width, canvas.height );
-        gl.bindFramebuffer(gl.FRAMEBUFFER, spotShadowFBO.fbo);
-        gl.viewport(0, 0, spotShadowFBO.width, spotShadowFBO.height);
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        if(lights.spot) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, spotShadowFBO.fbo);
+            gl.viewport(0, 0, spotShadowFBO.width, spotShadowFBO.height);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        for (const model_mat of model_mats) {
-            var mesh_name = Object.keys(meshs)[0];
-            drawModel_deep(
-                gl, 
-                deep_prog, 
-                meshs[mesh_name], 
-                buffers[mesh_name],
-                model_mat,
-                lights.spot.getLightViewMat(),
-                lights.spot.getLightProjMat()
-            );
+            for (const model_mat of model_mats) {
+                var mesh_name = Object.keys(meshs)[0];
+                drawModel_deep(
+                    gl, 
+                    deep_prog, 
+                    meshs[mesh_name], 
+                    buffers[mesh_name],
+                    model_mat,
+                    lights.spot.getLightViewMat(),
+                    lights.spot.getLightProjMat()
+                );
+            }
         }
 
         // Draw Models
