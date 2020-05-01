@@ -68,6 +68,13 @@ export function drawModel(gl, program, mesh, buffer,
     }
     norm_mat = inverse3(transpose(norm_mat));
 
+    var vec_mat = mat3(0);
+    for(var i=0; i<3; i++) {
+        for(var j=0; j<3; j++)
+            vec_mat[i][j] = vp_mat[i][j];
+    }
+    vec_mat = inverse3(transpose(vec_mat));
+
     var dirLight_vp_mat = mult(
         lights.direction.getLightProjMat(),
         lights.direction.getLightViewMat(), 
@@ -80,8 +87,10 @@ export function drawModel(gl, program, mesh, buffer,
 
     // 4. Assign transform matrixs
     gl.uniformMatrix4fv(program.u_model_mat, false, flatten(model_mat));
+    gl.uniformMatrix4fv(program.u_vp_mat, false, flatten(vp_mat));
     gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
     gl.uniformMatrix3fv(program.u_norm_mat, false, flatten(norm_mat));
+    gl.uniformMatrix3fv(program.u_vec_mat, false, flatten(vec_mat));
     gl.uniformMatrix4fv(program.u_dirLight_vp_mat, false, flatten(dirLight_vp_mat));
     gl.uniformMatrix4fv(program.u_spotLight_vp_mat, false, flatten(spotLight_vp_mat));
 

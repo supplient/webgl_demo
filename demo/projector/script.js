@@ -130,7 +130,8 @@ function start(gl, canvas, programs, meshs) {
         "a_pos", "a_norm", "a_uv", "a_tan", "a_bitan",
     ]);
     getLocations(gl, program, true, [
-        "u_model_mat", "u_mvp_mat", "u_norm_mat", 
+        "u_model_mat", "u_vp_mat", "u_mvp_mat", 
+        "u_norm_mat", "u_vec_mat",
         "u_dirLight_vp_mat", "u_spotLight_vp_mat",
         "u_ambientProd", 
         "u_dirLightDir", "u_dirDiffProd", "u_dirSpecProd", 
@@ -165,17 +166,18 @@ function start(gl, canvas, programs, meshs) {
             vec3(1.0, 1.0, 1.0)
         ),
         direction: new DirectionalLight(
-            vec3(1.0, 1.0, 1.0),
+            // vec3(1.0, 1.0, 1.0),
+            vec3(0, 0, 0),
             vec3(0, 0, 1),
             vec3(0, 0, -1),
             2
         ),
         spot: new SpotLight(
-            vec3(1.0, 0, 0),
-            vec3(0, 0, 3),
+            vec3(1.0, 1.0, 1.0),
+            vec3(1, 0, -0.5),
             vec3(0, 0, 0),
-            30,
-            40,
+            2,
+            3,
             10,
             0.05,
         ),

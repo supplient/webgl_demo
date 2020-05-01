@@ -21,8 +21,8 @@ uniform float u_Ns;
 uniform vec4 u_viewPos;
 
 // transform matrixs
-uniform mat4 u_mvp_mat;
-uniform mat3 u_norm_mat;
+uniform mat4 u_vp_mat;
+uniform mat3 u_vec_mat;
 
 // model textures
 uniform bool u_switch_diffuse;
@@ -85,8 +85,9 @@ vec4 toVec(const in ivec4 v) {
     return vec4(toFloat(v.x), toFloat(v.y), toFloat(v.z), toFloat(v.w));
 }
 
-bool inShadow(vec4 pos_in_clip, sampler2D shadow) {
+bool inShadow(vec4 pos_in_clip, sampler2D shadow, vec3 frag2light, vec3 N, float bias) {
     vec3 pos_in_light = (pos_in_clip.xyz / pos_in_clip.w) / 2.0 + 0.5;
+    pos_in_light.z -= (1.0 - dot(frag2light, N)) * bias;
     vec4 fdepth = packDepth(pos_in_light.z);
     ivec4 depth = toRGBA(fdepth);
 
@@ -128,40 +129,42 @@ void main()
 
     /// DirectionalLight
     // TODO Move dirLightDir, dirLightHalf's calculating to js
-    vec3 dirLightDir = normalize(u_norm_mat * (-u_dirLightDir)); // Light vector
+    vec3 dirLightDir = normalize(u_vec_mat * (-u_dirLightDir)); // Light vector
     vec3 dirLightHalf = normalize(dirLightDir + viewForw); // Half angle vector
     vec3 dirDiff = max(dot(dirLightDir, N), 0.0) * u_dirDiffProd;
     vec3 dirSpec = pow(max(dot(N, dirLightHalf), 0.0), u_Ns) * u_dirSpecProd;
     
     //// Check DirectionalLight's shadow
-    if(!inShadow(v_pos_in_dirLight, s_dirShadow)) {
+    if(!inShadow(
+            v_pos_in_dirLight, s_dirShadow,
+            dirLightDir, N, 0.005
+            )
+        ) {
         diffColor += dirDiff;
         specColor += dirSpec;
     }
 
     /// SpotLight
-    vec4 spotLightPos = u_mvp_mat * vec4(u_spotLightPos, 1.0);
+    vec4 spotLightPos = u_vp_mat * vec4(u_spotLightPos, 1.0);
     vec3 spotForw = normalize((spotLightPos - v_pos).xyz);
-    vec3 spotLightDir = normalize(u_norm_mat * (-u_spotLightDir));
+    vec3 spotLightDir = normalize(u_vec_mat * (-u_spotLightDir));
     float spotFragCos = dot(spotForw, spotLightDir);
     float spotIntensity = clamp((spotFragCos - u_spotOutCos)/(u_spotInCos - u_spotOutCos), 0.0, 1.0);
-    vec3 spotLightHalf = normalize(spotLightDir + viewForw);
-    vec3 spotDiff = max(dot(spotLightDir, N), 0.0) * u_spotDiffProd * spotIntensity;
+    vec3 spotLightHalf = normalize(spotForw + viewForw);
+    vec3 spotDiff = max(dot(spotForw, N), 0.0) * u_spotDiffProd * spotIntensity;
     vec3 spotSpec = pow(max(dot(N, spotLightHalf), 0.0), u_Ns) * u_spotSpecProd * spotIntensity;
 
     //// Check whether in SpotLight's shadow
-    vec3 pos_in_light = (v_pos_in_spotLight.xyz / v_pos_in_spotLight.w) / 2.0 + 0.5;
-    vec4 fdepth = packDepth(pos_in_light.z);
-    ivec4 depth = toRGBA(fdepth);
-
-    vec2 light_uv = pos_in_light.xy;
-    vec4 flight_depth = texture2D(s_spotShadow, light_uv);
-    ivec4 light_depth = toRGBA(flight_depth);
-
-    if(!inShadow(v_pos_in_spotLight, s_spotShadow)) {
+    if(!inShadow(
+            v_pos_in_spotLight, s_spotShadow,
+            spotForw, N, 0.005
+            )
+        ) {
+        // diffColor += spotDiff;
+        // specColor += spotSpec;
+    }
         diffColor += spotDiff;
         specColor += spotSpec;
-    }
 
     vec4 diffuse = vec4(diffColor, 1.0);
     vec4 specular = vec4(specColor, 1.0);
@@ -172,8 +175,6 @@ void main()
     }
 
     gl_FragColor = ambient + diffuse + specular;
-    // gl_FragColor = vec4(-v_pos_in_spotLight.xyz, 1.0);
-    // gl_FragColor = vec4(flight_depth.xyz, 1.0);
 
     // if(in_shadow) {
         // gl_FragColor = vec4(0.6, 0.0, 0.0, 1.0);

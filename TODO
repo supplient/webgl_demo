@@ -14,6 +14,7 @@
     * 通过与夹角相关的偏移量修正“阴影失真”问题
         * https://learnopengl-cn.readthedocs.io/zh/latest/05%20Advanced%20Lighting/03%20Shadows/01%20Shadow%20Mapping/
     * 添加距离因子，使得光会随距离衰减
+    * 把一堆光照相关的计算从着色器转移到JS里，因为它们是每个顶点都一样的
 * 修改view.js
     * 使得可以直接导出视点当前所在位置
     * 可以上下左右移动
