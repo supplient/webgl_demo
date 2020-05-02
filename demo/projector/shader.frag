@@ -200,7 +200,7 @@ void main()
         ivec4 light_depth = toRGBA(flight_depth);
         if(!inShadow(
                 v_pos_in_spotLight, s_spotShadow,
-                spotForw, N, 0.005, 0.0
+                spotForw, N, 0.0005, 0.0
                 )
             ) {
             diffColor += spotDiff;

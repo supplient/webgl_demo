@@ -129,7 +129,7 @@ function start(gl, canvas, programs, meshs) {
         0, 0, 1, 0,
         0, 0, 0, 1
     ]);
-    var proj_mat = ortho(-1, 1, -1, 1, 1, -1); // Note we set z=1 is near to use right hand coordinate system
+    var proj_mat = ortho(-2, 2, -2, 2, 2, -2); // Note we set z=2 is near to use right hand coordinate system
 
     // Regist view
     var onViewMatChange = function(new_view_mat) {
