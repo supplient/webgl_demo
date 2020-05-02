@@ -109,22 +109,6 @@ export class PointLight {
         );
     }
 
-    /*
-   /\(0, 1)                     (1, 1)
-    |---------------------------
-    |        |        |        |
-    |        |        |        |
-    |   z-   |   y-   |   x-   |
-    |        |        |        |
-    |---------------------------
-    |        |        |        |
-    |   z+   |   y+   |   x+   |
-    |        |        |        |
-    |        |        |        |
-    |--------------------------->
-    (0, 0)                      (1, 0)
-    */
-
     static getDirs() {
         return [
             vec3(0, 0, 1),
@@ -145,25 +129,6 @@ export class PointLight {
             vec3(0, -1, 0),
             vec3(0, -1, 0),
         ]
-    }
-
-    static getUVs() {
-        return [
-            vec2(0, 0),
-            vec2(0, 1/2),
-            vec2(1/3, 0),
-            vec2(1/3, 1/2),
-            vec2(2/3, 0),
-            vec2(2/3, 1/2),
-        ];
-    }
-
-    static getUVWidth() {
-        return 1/3;
-    }
-
-    static getUVHeight() {
-        return 1/2;
     }
 
     static getTargets(gl) {

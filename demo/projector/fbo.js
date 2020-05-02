@@ -27,6 +27,7 @@ export function init2DShadowFBO(gl, width, height) {
         width: width,
         fbo: fbo,
         fbo_tex: fbo_tex,
+        fbo_depth: fbo_depth,
     }
 }
 
@@ -59,5 +60,6 @@ export function initPointShadowFBO(gl, per_width, per_height) {
         per_width: per_width,
         fbo: fbo,
         fbo_tex: fbo_tex,
+        fbo_depth: fbo_depth,
     }
 }

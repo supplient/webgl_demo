@@ -95,9 +95,11 @@ vec4 toVec(const in ivec4 v) {
     return vec4(toFloat(v.x), toFloat(v.y), toFloat(v.z), toFloat(v.w));
 }
 
-bool inShadow(vec4 pos_in_clip, sampler2D shadow, vec3 frag2light, vec3 N, float bias) {
+bool inShadow(vec4 pos_in_clip, sampler2D shadow, 
+        vec3 frag2light, vec3 N, float bias, float min_bias
+        ) {
     vec3 pos_in_light = (pos_in_clip.xyz / pos_in_clip.w) / 2.0 + 0.5;
-    pos_in_light.z -= (1.0 - dot(frag2light, N)) * bias;
+    pos_in_light.z -= max((1.0 - dot(frag2light, N)) * bias, min_bias);
     vec4 fdepth = packDepth(pos_in_light.z);
     ivec4 depth = toRGBA(fdepth);
 
@@ -115,16 +117,16 @@ bool inShadow(vec4 pos_in_clip, sampler2D shadow, vec3 frag2light, vec3 N, float
 
 bool cubeInShadow(vec4 lightPos, vec4 worldPos, float farPlane, 
         samplerCube shadow, 
-        vec3 N, float bias
+        vec3 frag2light, vec3 N, float bias, float min_bias
         ) {
-    vec3 frag2light = normalize((lightPos - worldPos).xyz);
     float dist = length(lightPos.xyz - worldPos.xyz);
     dist = dist / farPlane;
-    dist -= (1.0 - dot(frag2light, N)) * bias;
+    dist -= max((1.0 - dot(frag2light, N)) * bias, 0.005);
     vec4 fdepth = packDepth(dist);
     ivec4 depth = toRGBA(fdepth);
 
-    vec4 flight_depth = textureCube(shadow, -frag2light);
+    vec3 light2frag_world = normalize((worldPos - lightPos).xyz);
+    vec4 flight_depth = textureCube(shadow, light2frag_world);
     ivec4 light_depth = toRGBA(flight_depth);
 
     return (
@@ -168,7 +170,7 @@ void main()
         //// Check DirectionalLight's shadow
         if(!inShadow(
                 v_pos_in_dirLight, s_dirShadow,
-                u_dirLightDir, N, 0.0005
+                u_dirLightDir, N, 0.5, 0.0005
                 )
             ) {
             diffColor += dirDiff;
@@ -177,6 +179,8 @@ void main()
     }
 
     /// SpotLight
+    vec4 fdepth;
+    vec4 flight_depth;
     if(u_switch_spot) {
         vec3 spotForw = normalize((u_spotLightPos - v_pos).xyz);
         float spotFragCos = dot(spotForw, u_spotLightDir);
@@ -186,9 +190,17 @@ void main()
         vec3 spotSpec = pow(max(dot(N, spotLightHalf), 0.0), u_Ns) * u_spotSpecProd * spotIntensity;
 
         //// Check whether in SpotLight's shadow
+        vec3 pos_in_light = (v_pos_in_spotLight.xyz / v_pos_in_spotLight.w) / 2.0 + 0.5;
+        pos_in_light.z -= max((1.0 - dot(spotForw, N)) * 0.5, 0.0005);
+        fdepth = packDepth(pos_in_light.z);
+        ivec4 depth = toRGBA(fdepth);
+
+        vec2 light_uv = pos_in_light.xy;
+        flight_depth = texture2D(s_spotShadow, light_uv);
+        ivec4 light_depth = toRGBA(flight_depth);
         if(!inShadow(
                 v_pos_in_spotLight, s_spotShadow,
-                spotForw, N, 0.005
+                spotForw, N, 0.005, 0.0
                 )
             ) {
             diffColor += spotDiff;
@@ -207,7 +219,7 @@ void main()
         if(!cubeInShadow(
                 u_pointLightWorldPos, v_worldPos, u_pointFarPlane,
                 s_pointShadow,
-                N, 0.01
+                pointForw, N, 0.05, 0.005
                 )
             ) {
             diffColor += pointDiff;

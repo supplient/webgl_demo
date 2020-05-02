@@ -2,7 +2,7 @@ import {downloadModels} from "../../lib/utils.js"
 import {loadPrograms} from "../../lib/initShaders_v2.js"
 import {AmbientLight, DirectionalLight, SpotLight, PointLight} from "./light.js"
 import {bufferOneModel} from "./buffer.js"
-import {getTexSwitchVarName, getTexVarName, drawModel_deep, drawModel_dist, drawModel, drawTextureCube} from "./draw.js"
+import {getTexSwitchVarName, getTexVarName, drawModel_deep, drawModel_dist, drawModels, drawTextureCube} from "./draw.js"
 import {init2DShadowFBO, initPointShadowFBO} from "./fbo.js"
 
 window.onload = function main() {
@@ -177,10 +177,10 @@ function start(gl, canvas, programs, meshs) {
         ),
         spot: new SpotLight(
             vec3(0.6, 0.3, 0.4),
-            vec3(0, 0, 0.2),
-            vec3(0, 0, -1),
-            5,
-            7,
+            vec3(1.0, 1.0, 1.0),
+            vec3(-1, -1, -1),
+            17,
+            19,
             10,
             0.05,
         ),
@@ -191,8 +191,6 @@ function start(gl, canvas, programs, meshs) {
             0.05,
         ),
     }
-    lights.direction = null;
-    lights.spot = null;
 
     // =============Anime(Render)================
     function drawShadow_deep(
@@ -244,6 +242,14 @@ function start(gl, canvas, programs, meshs) {
         // Draw directional light's depth texture
         if(lights.direction) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, dirShadowFBO.fbo);
+            gl.framebufferTexture2D(
+                gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+                gl.TEXTURE_2D, dirShadowFBO.fbo_tex, 0
+                );
+            gl.framebufferRenderbuffer(
+                gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, 
+                gl.RENDERBUFFER, dirShadowFBO.fbo_depth
+                );
             drawShadow_deep(
                 dirShadowFBO.width,
                 dirShadowFBO.height,
@@ -255,6 +261,14 @@ function start(gl, canvas, programs, meshs) {
         // Draw spot light's depth texture
         if(lights.spot) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, spotShadowFBO.fbo);
+            gl.framebufferTexture2D(
+                gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+                gl.TEXTURE_2D, spotShadowFBO.fbo_tex, 0
+                );
+            gl.framebufferRenderbuffer(
+                gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, 
+                gl.RENDERBUFFER, spotShadowFBO.fbo_depth
+                );
             drawShadow_deep(
                 spotShadowFBO.width,
                 spotShadowFBO.height,
@@ -269,6 +283,10 @@ function start(gl, canvas, programs, meshs) {
             var point_proj_mat = lights.point.getLightProjMat();
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, pointShadowFBO.fbo);
+            gl.framebufferRenderbuffer(
+                gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, 
+                gl.RENDERBUFFER, pointShadowFBO.fbo_depth
+                );
             for(var i=0; i<6; i++) {
                 var target = PointLight.getTargets(gl)[i];
                 gl.framebufferTexture2D(
@@ -306,34 +324,28 @@ function start(gl, canvas, programs, meshs) {
         // drawPointLightShadow();
 
         // Draw Models
-        function drawModels() {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.viewport( 0, 0, canvas.width, canvas.height );
-            gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
-            gl.enable(gl.DEPTH_TEST);
-            gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport( 0, 0, canvas.width, canvas.height );
+        gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+        gl.enable(gl.DEPTH_TEST);
+        gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            for (const model_mat of model_mats) {
-                var mesh_name = Object.keys(meshs)[0];
-                drawModel(
-                    gl, 
-                    program, 
-                    meshs[mesh_name], 
-                    buffers[mesh_name],
-                    model_mat,
-                    view_mat,
-                    proj_mat,
-                    tex_attr_map,
-                    lights,
-                    {
-                        direction: dirShadowFBO.fbo_tex,
-                        spot: spotShadowFBO.fbo_tex,
-                        point: pointShadowFBO.fbo_tex,
-                    }
-                );
+        var mesh_names = [];
+        for(var i=0; i<model_mats.length; i++)
+            mesh_names.push(Object.keys(meshs)[0]);
+        drawModels(
+            gl, program,
+            meshs, buffers,
+            mesh_names, model_mats,
+            view_mat, proj_mat,
+            tex_attr_map,
+            lights,
+            {
+                direction: dirShadowFBO.fbo_tex,
+                spot: spotShadowFBO.fbo_tex,
+                point: pointShadowFBO.fbo_tex,
             }
-        }
-        drawModels();
+        )
 
         requestAnimationFrame(render)
     };
