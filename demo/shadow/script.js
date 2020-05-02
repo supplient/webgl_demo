@@ -185,7 +185,7 @@ function start(gl, canvas, programs, meshs) {
             0.05,
         ),
         point: new PointLight(
-            vec3(0.5, 0.475, 0.7),
+            vec3(0.2, 0.475, 0.7),
             vec3(0, 0, 0),
             5,
             0.05,

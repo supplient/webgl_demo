@@ -2,6 +2,9 @@
 ## gimbal_lock
 [index.html](demo\gimbal_lock\index.html)
 
+## shadow
+[index.html](demo\shadow\index.html)
+
 # homework
 ## ch2
 [2_1.html](homework\ch2\2_1.html)
@@ -34,8 +37,14 @@
 ## load_model
 [index.html](scratch\load_model\index.html)
 
+## precision_test
+[index.html](scratch\precision_test\index.html)
+
 ## project_dice
 [index.html](scratch\project_dice\index.html)
+
+## simple_FBO
+[index.html](scratch\simple_FBO\index.html)
 
 ## simple_tex
 [index.html](scratch\simple_tex\index.html)
