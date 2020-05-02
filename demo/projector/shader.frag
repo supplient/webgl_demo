@@ -20,6 +20,15 @@ uniform vec3 u_spotDiffProd;
 uniform vec3 u_spotSpecProd;
 uniform sampler2D s_spotShadow;
 
+// point light
+uniform bool u_switch_point;
+uniform vec4 u_pointLightWorldPos; // TODO
+uniform vec4 u_pointLightPos;
+uniform float u_pointFarPlane; // TODO
+uniform vec3 u_pointDiffProd;
+uniform vec3 u_pointSpecProd;
+uniform samplerCube s_pointShadow; // TODO
+
 // other light model parameters
 uniform float u_Ns;
 uniform vec4 u_viewPos;
@@ -35,8 +44,9 @@ uniform bool u_switch_norm;
 uniform sampler2D s_norm;
 
 // varying
-varying vec3 v_norm;
+varying vec4 v_worldPos;
 varying vec4 v_pos;
+varying vec3 v_norm;
 varying vec2 v_uv;
 varying vec3 v_tan;
 varying vec3 v_bitan;
@@ -101,8 +111,30 @@ bool inShadow(vec4 pos_in_clip, sampler2D shadow, vec3 frag2light, vec3 N, float
         (depth.x == light_depth.x && depth.y == light_depth.y && depth.z > light_depth.z) ||
         (depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w > light_depth.w)
     );
-    
 }
+
+bool cubeInShadow(vec4 lightPos, vec4 worldPos, float farPlane, 
+        samplerCube shadow, 
+        vec3 N, float bias
+        ) {
+    vec3 frag2light = normalize((lightPos - worldPos).xyz);
+    float dist = length(lightPos.xyz - worldPos.xyz);
+    dist = dist / farPlane;
+    dist -= (1.0 - dot(frag2light, N)) * bias;
+    vec4 fdepth = packDepth(dist);
+    ivec4 depth = toRGBA(fdepth);
+
+    vec4 flight_depth = textureCube(shadow, -frag2light);
+    ivec4 light_depth = toRGBA(flight_depth);
+
+    return (
+        (depth.x > light_depth.x) ||
+        (depth.x == light_depth.x && depth.y > light_depth.y) ||
+        (depth.x == light_depth.x && depth.y == light_depth.y && depth.z > light_depth.z) ||
+        (depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w > light_depth.w)
+    );
+}
+
 
 void main()
 {
@@ -164,6 +196,25 @@ void main()
         }
     }
 
+    /// PointLight
+    if(u_switch_point) {
+        vec3 pointForw = normalize((u_pointLightPos - v_pos).xyz);
+        vec3 pointLightHalf = normalize(pointForw + viewForw);
+        vec3 pointDiff = max(dot(N, pointForw), 0.0) * u_pointDiffProd;
+        vec3 pointSpec = pow(max(dot(N, pointLightHalf), 0.0), u_Ns) * u_pointSpecProd;
+
+        //// Check whether in SpotLight's shadow
+        if(!cubeInShadow(
+                u_pointLightWorldPos, v_worldPos, u_pointFarPlane,
+                s_pointShadow,
+                N, 0.005
+                )
+            ) {
+            diffColor += pointDiff;
+            specColor += pointSpec;
+        }
+    }
+
     vec4 diffuse = vec4(diffColor, 1.0);
     vec4 specular = vec4(specColor, 1.0);
 
@@ -173,29 +224,4 @@ void main()
     }
 
     gl_FragColor = ambient + diffuse + specular;
-
-    // gl_FragColor = vec4(toVec(depth).xyz, 1.0);
-    // gl_FragColor = vec4(toVec(light_depth).xyz, 1.0);
-
-    // if(depth.x > light_depth.x) {
-        // gl_FragColor = vec4(0.5, 0.0, 0.0, 1.0); // Red
-    // } else if(depth.x == light_depth.x && depth.y > light_depth.y) {
-        // gl_FragColor = vec4(0.0, 0.5, 0.0, 1.0); // Green
-    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z > light_depth.z) {
-        // gl_FragColor = vec4(0.0, 0.0, 0.5, 1.0); // Blue
-    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w > light_depth.w) {
-        // gl_FragColor = vec4(0.5, 0.5, 0.0, 1.0); // Yellow
-    // } else if(depth.x == light_depth.x && depth.y == light_depth.y && depth.z == light_depth.z && depth.w == light_depth.w) {
-        // gl_FragColor = vec4(0.0, 0.5, 0.5, 1.0); // Clyn
-    // } else if(depth.x < light_depth.x) {
-        // gl_FragColor = vec4(0.5, 0.0, 0.5, 1.0); // Purple
-    // } else if(depth.y < light_depth.y) {
-        // gl_FragColor = vec4(0.25, 0, 0, 1.0); // Small Red
-    // } else if(depth.z < light_depth.z) {
-        // gl_FragColor = vec4(0.0, 0.25, 0.0, 1.0); // Small Green
-    // } else if(depth.w < light_depth.w) {
-        // gl_FragColor = vec4(0.0, 0.0, 0.25, 1.0); // Small Blue
-    // } else {
-        // gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0); // White
-    // }
 }

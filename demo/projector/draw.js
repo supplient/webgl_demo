@@ -39,9 +39,45 @@ export function drawModel_deep(gl, program, mesh, buffer, model_mat, view_mat, p
     }
 }
 
+export function drawModel_dist(
+        gl, program, 
+        mesh, buffer, 
+        model_mat, view_mat, proj_mat, 
+        lightPos, farPlane
+    ) {
+    // 1. Select shaders
+    gl.useProgram( program );
+
+    // 2. Assign attribute vars
+    assignAttrib(gl, buffer.vert, 3, gl.FLOAT, program.a_pos);
+
+    // 3. Assign mats
+    var vp_mat = mult(proj_mat, view_mat);
+    var mvp_mat = mult(vp_mat, model_mat);
+    gl.uniformMatrix4fv(program.u_model_mat, false, flatten(model_mat));
+    gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
+
+    // 4. Assign uniform vars
+    gl.uniform4fv(program.u_lightPos, lightPos);
+    gl.uniform1f(program.u_farPlane, farPlane);
+
+    // Draw material by material
+    var index_buffers = buffer.indices;
+    for(var mtl_i=0; mtl_i<index_buffers.length; mtl_i++) {
+        var mtl = mesh.materialsByIndex[mtl_i];
+
+        var buf = index_buffers[mtl_i].buffer;
+        var type = index_buffers[mtl_i].type;
+        var num = index_buffers[mtl_i].num;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
+        gl.drawElements(gl.TRIANGLES, num, type, 0);
+    }
+}
+
 export function drawModel(gl, program, mesh, buffer, 
                     model_mat, view_mat, proj_mat,
-                    lights, tex_attr_map, shadow_texs
+                    tex_attr_map, 
+                    lights, shadow_texs,
                     ) {
     // 1. Select shaders
     gl.useProgram( program );
@@ -132,6 +168,23 @@ export function drawModel(gl, program, mesh, buffer,
         gl.uniform1i(program.u_switch_spot, false);
     }
 
+    if(lights.point) {
+        gl.uniform1i(program.u_switch_point, true);
+
+        var pointLightPos = lights.point.getPosVec4();
+        gl.uniform4fv(program.u_pointLightWorldPos, pointLightPos);
+        pointLightPos = mult(vp_mat, pointLightPos);
+        gl.uniform4fv(program.u_pointLightPos, pointLightPos);
+        gl.uniform1f(program.u_pointFarPlane, lights.point.far);
+
+        gl.activeTexture(gl.TEXTURE5);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, shadow_texs.point);
+        gl.uniform1i(program.s_pointShadow, 5);
+    }
+    else {
+        gl.uniform1i(program.u_switch_point, false);
+    }
+
     // Draw material by material
     var tex_units = [
         gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2, gl.TEXTURE3, 
@@ -161,6 +214,14 @@ export function drawModel(gl, program, mesh, buffer,
             gl.uniform3fv(program.u_spotSpecProd, spotSpecProd);
         }
 
+        if(lights.point) {
+            var pointDiffProd = mult(mtl.diffuse, lights.point.color);
+            var pointSpecProd = mult(mtl.specular, lights.point.color);
+
+            gl.uniform3fv(program.u_pointDiffProd, pointDiffProd);
+            gl.uniform3fv(program.u_pointSpecProd, pointSpecProd);
+        }
+
         var Ns = mtl.specularExponent;
         var viewPos = mult(proj_mat, vec4(0, 0, 1, 1));
         gl.uniform1f(program.u_Ns, Ns);
@@ -187,6 +248,52 @@ export function drawModel(gl, program, mesh, buffer,
         // OLD_TODO use one buffer and offset
         // WHY_OLD we need to use different size of array to save different indice buffer, such as Uint8Array, Uint16Array.
         //          so it is inconvenient to use one buffer.
+        var buf = index_buffers[mtl_i].buffer;
+        var type = index_buffers[mtl_i].type;
+        var num = index_buffers[mtl_i].num;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf);
+        gl.drawElements(gl.TRIANGLES, num, type, 0);
+    }
+}
+
+export function drawTextureCube(gl, program,
+                    mesh, buffer, 
+                    model_mat, view_mat, proj_mat,
+                    texture,
+                    ) {
+    // 1. Select shaders
+    gl.useProgram( program );
+
+    // 2. Assign attribute vars
+    assignAttrib(gl, buffer.vert, 3, gl.FLOAT, program.a_pos);
+    assignAttrib(gl, buffer.norm, 3, gl.FLOAT, program.a_norm);
+
+    // 3. Calculate mvp_mat & norm_nat
+    var vp_mat = mult(proj_mat, view_mat);
+    var mvp_mat = mult(vp_mat, model_mat);
+
+    var norm_mat = mat3(0);
+    for(var i=0; i<3; i++) {
+        for(var j=0; j<3; j++)
+            norm_mat[i][j] = mvp_mat[i][j];
+    }
+    norm_mat = inverse3(transpose(norm_mat));
+
+    // 4. Assign transform matrixs
+    gl.uniformMatrix4fv(program.u_mvp_mat, false, flatten(mvp_mat));
+    gl.uniformMatrix3fv(program.u_norm_mat, false, flatten(norm_mat));
+
+    // 4.5 Assign lights' transform matrixs, shadow textures
+
+    // Draw material by material
+    var index_buffers = buffer.indices;
+    for(var mtl_i=0; mtl_i<index_buffers.length; mtl_i++) {
+        // 7. Assign textures
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+        gl.uniform1i(program.s_cube, 0);
+
+        // 8. Draw
         var buf = index_buffers[mtl_i].buffer;
         var type = index_buffers[mtl_i].type;
         var num = index_buffers[mtl_i].num;

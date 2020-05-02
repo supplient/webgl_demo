@@ -67,3 +67,113 @@ export class SpotLight {
         );
     }
 }
+
+export class PointLight {
+    constructor(color, pos,
+            far, near=0.01) {
+        this.color = color;
+        this.pos = pos;
+        this.far = far;
+        this.near = near;
+    }
+
+    getPosVec4() {
+        return vec4(
+            this.pos[0],
+            this.pos[1],
+            this.pos[2],
+            1.0
+        );
+    }
+
+    getLightViewMats() {
+        var view_mats = [];
+        for(var i=0; i<6; i++) {
+            var dir = PointLight.getDirs()[i];
+            var up = PointLight.getUps()[i];
+            view_mats.push(lookAt(
+                this.pos,
+                add(this.pos, dir),
+                up
+            ));
+        }
+        return view_mats;
+    }
+
+    getLightProjMat() {
+        return perspective(
+            90,
+            1,
+            this.near,
+            this.far
+        );
+    }
+
+    /*
+   /\(0, 1)                     (1, 1)
+    |---------------------------
+    |        |        |        |
+    |        |        |        |
+    |   z-   |   y-   |   x-   |
+    |        |        |        |
+    |---------------------------
+    |        |        |        |
+    |   z+   |   y+   |   x+   |
+    |        |        |        |
+    |        |        |        |
+    |--------------------------->
+    (0, 0)                      (1, 0)
+    */
+
+    static getDirs() {
+        return [
+            vec3(0, 0, 1),
+            vec3(0, 0, -1),
+            vec3(0, 1, 0),
+            vec3(0, -1, 0),
+            vec3(1, 0, 0),
+            vec3(-1, 0, 0),
+        ];
+    }
+
+    static getUps() {
+        return [
+            vec3(0, 1, 0),
+            vec3(0, 1, 0),
+            vec3(0, 0, 1),
+            vec3(0, 0, 1),
+            vec3(0, 1, 0),
+            vec3(0, 1, 0),
+        ]
+    }
+
+    static getUVs() {
+        return [
+            vec2(0, 0),
+            vec2(0, 1/2),
+            vec2(1/3, 0),
+            vec2(1/3, 1/2),
+            vec2(2/3, 0),
+            vec2(2/3, 1/2),
+        ];
+    }
+
+    static getUVWidth() {
+        return 1/3;
+    }
+
+    static getUVHeight() {
+        return 1/2;
+    }
+
+    static getTargets(gl) {
+        return [
+            gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+            gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+            gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+            gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+            gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+        ];
+    }
+}

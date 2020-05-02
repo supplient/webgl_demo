@@ -11,8 +11,9 @@ uniform mat3 u_norm_mat;
 uniform mat4 u_dirLight_vp_mat;
 uniform mat4 u_spotLight_vp_mat;
 
-varying vec3 v_norm;
+varying vec4 v_worldPos;
 varying vec4 v_pos;
+varying vec3 v_norm;
 varying vec2 v_uv;
 varying vec3 v_tan;
 varying vec3 v_bitan;
@@ -24,6 +25,7 @@ void main()
 {
     gl_Position = u_mvp_mat * a_pos;
 
+    v_worldPos = u_model_mat * a_pos;
     v_pos = u_mvp_mat * a_pos;
     v_norm = u_norm_mat * a_norm.xyz;
     v_uv = a_uv.xy;
