@@ -138,12 +138,12 @@ export class PointLight {
 
     static getUps() {
         return [
-            vec3(0, 1, 0),
-            vec3(0, 1, 0),
+            vec3(0, -1, 0),
+            vec3(0, -1, 0),
             vec3(0, 0, 1),
-            vec3(0, 0, 1),
-            vec3(0, 1, 0),
-            vec3(0, 1, 0),
+            vec3(0, 0, -1),
+            vec3(0, -1, 0),
+            vec3(0, -1, 0),
         ]
     }
 

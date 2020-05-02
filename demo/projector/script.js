@@ -151,10 +151,17 @@ function start(gl, canvas, programs, meshs) {
     // =============Scene================
     // Set Model Matrix
     var model_mats = [
-        mult(translate(0, 0, -0.5), scalem(2/5, 2/5, 2/5)),
-        mult(translate(0, 0, 0.5), scalem(2/5, 2/5, 2/5)),
-        mult(translate(0, 0, -1), scalem(18/5, 18/5, 1/5)),
-        mult(translate(1.0, 0, 0), scalem(1/5, 18/5, 18/5)),
+        mult(translate(0.2, 0.2, -0.5), scalem(2/5, 2/5, 2/5)),
+        mult(translate(0, 0, -0.9), scalem(18/5, 18/5, 1/5)),
+        mult(translate(0, 0, -0.7), scalem(9/5, 9/5, 1/10)),
+
+        mult(translate(-0.5, 0.2, 0.2), scalem(2/5, 2/5, 2/5)),
+        mult(translate(-0.9, 0, 0), scalem(1/5, 18/5, 18/5)),
+
+        mult(translate(0.2, -0.5, 0.2), scalem(2/5, 2/5, 2/5)),
+        mult(translate(0, -0.9, 0), scalem(18/5, 1/5, 18/5)),
+
+        mult(translate(-0.4, -0.3, -0.3), scalem(2/5, 2/5, 2/5)),
     ];
 
     // Set Lights

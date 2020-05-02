@@ -22,12 +22,12 @@ uniform sampler2D s_spotShadow;
 
 // point light
 uniform bool u_switch_point;
-uniform vec4 u_pointLightWorldPos; // TODO
+uniform vec4 u_pointLightWorldPos;
 uniform vec4 u_pointLightPos;
-uniform float u_pointFarPlane; // TODO
+uniform float u_pointFarPlane;
 uniform vec3 u_pointDiffProd;
 uniform vec3 u_pointSpecProd;
-uniform samplerCube s_pointShadow; // TODO
+uniform samplerCube s_pointShadow;
 
 // other light model parameters
 uniform float u_Ns;
@@ -207,7 +207,7 @@ void main()
         if(!cubeInShadow(
                 u_pointLightWorldPos, v_worldPos, u_pointFarPlane,
                 s_pointShadow,
-                N, 0.005
+                N, 0.01
                 )
             ) {
             diffColor += pointDiff;
